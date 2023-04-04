@@ -1,0 +1,6 @@
+{
+  "name": "lua-enum-simple",
+  "tree": {
+    "$path": "lib.project.json"
+  }
+}

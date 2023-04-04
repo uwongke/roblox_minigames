@@ -1,0 +1,12 @@
+[package]
+name = "passhley/gooey-particles"
+description = "UI Particle System with support for Roact."
+version = "0.1.0"
+license = "MIT"
+authors = ["passhley"]
+realm = "shared"
+registry = "https://github.com/UpliftGames/wally-index"
+
+[dependencies]
+Roact = "roblox/roact@1.4.2"
+Llama = "freddylist/llama@1.1.1"
