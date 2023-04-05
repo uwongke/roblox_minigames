@@ -18,6 +18,7 @@ local CoinArenaService = Knit.CreateService {
     Client = {
         GotCoin = Knit.CreateSignal(),
         PrepGame = Knit.CreateSignal(),
+        StartGame = Knit.CreateSignal(),
         EndGame = Knit.CreateSignal()
         
 };

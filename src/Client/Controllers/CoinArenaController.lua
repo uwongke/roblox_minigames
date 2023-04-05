@@ -6,6 +6,7 @@ local knit = require(ReplicatedStorage.Packages.Knit)
 local MiniGameExtras = ReplicatedStorage.Assets.MiniGameExtras.CoinArena
 local UI = ReplicatedStorage.Assets.UI.MiniGames.CoinArena.CoinArenaUI
 local CoinSound:Sound = MiniGameExtras.CoinSound
+local CoinBagSound:Sound = MiniGameExtras.CoinBagSound
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -77,6 +78,8 @@ function CoinArenaController:KnitStart()
 
         --set player speed
         game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 22
+        --anchor player
+        game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = true
         --animations
         local animator = player.Character.Humanoid:WaitForChild("Animator")
         self.PunchAnimationTrack = animator:LoadAnimation(punchAnimation)
@@ -113,14 +116,23 @@ function CoinArenaController:KnitStart()
         end)
 
     end)
-    self.CoinArenaService.GotCoin:Connect(function(newCoinAmount)
+    self.CoinArenaService.GotCoin:Connect(function(newCoinAmount, coinsPickedUp)
        --self.Coins += 1
        --self.CoinArenaService:UpdateCoinDisplay(self.Coins)
        self.UI.Frame.TextLabel.Text = "x" .. newCoinAmount
-       if CoinSound then
-        CoinSound:Play()
-       end
+       if coinsPickedUp > 1 then
+        if CoinBagSound then
+            CoinBagSound:Play()
+        end
+       else
+            if CoinSound then
+                CoinSound:Play()
+            end
+        end
     end)
+    self.CoinArenaService.StartGame:Connect(function()
+        game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
+   end)
     self.CoinArenaService.EndGame:Connect(function()
          --set player speed
          game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16
@@ -133,9 +145,9 @@ function CoinArenaController:KnitStart()
          self.PunchListener:Disconnect()
 
     end)
-    GotHit.OnClientEvent:Connect(function(otherPlayer)
+    GotHit.OnClientEvent:Connect(function(otherPlayerRoot)
         
-        local otherPlayerRoot = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
+        --local otherPlayerRoot = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not otherPlayerRoot then return end
         local localRoot = player.Character:FindFirstChild("HumanoidRootPart")
 
