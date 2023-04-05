@@ -31,15 +31,15 @@ function module:HandleMessage(message)
             local textField = self.TitleBar:FindFirstChild(key)
             if textField then
                 textField.Visible = val ~= ""
-                textField.Text = val
                 if val == "Go!" then
                     self:DisableMovement()
+                else
+                    if string.find(val, "Inverse") and textField.Text ~= val then
+                        self.Direction *= -1
+                    end
                 end
+                textField.Text = val
             end
-        end
-    else
-        if string.find(message, "Inverse") then
-            self.Direction *= -1
         end
     end
 end
