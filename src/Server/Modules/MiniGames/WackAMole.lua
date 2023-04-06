@@ -149,7 +149,16 @@ function module:SpawnMole(origin)
     end
     -- determine if the spawned mole is "Gold" or Normal
     local goldRarity = 10 -- percent
-    local molePrefix = math.random(1, 100) < goldRarity and "Gold" or ""
+    local badRarity = 10
+    local value = math.random(1, 100)
+    local molePrefix = ""
+    if value < goldRarity then
+        molePrefix = "Gold"
+    else
+        if value > 100 - badRarity then
+            molePrefix = "Bad"
+        end
+    end
     local mole = Extras[molePrefix.."Mole"]:Clone()
     spawnPoint.Spawn = mole
     mole.Position = spawnPoint.Origin.Position
@@ -182,6 +191,8 @@ end
 --initialize data and give mallets to players
 function  module:JoinGame(player)
     if self.CanJoin.Value then
+        --doesn't exist server side
+        --local controls = require(player.PlayerScripts.PlayerModule):GetControls()
         --assign players back and forth to keep teams even
         self.PlayersJoined += 1
         local team = self.PlayersJoined%2 == 0 and "Red" or "Blue"
@@ -205,16 +216,28 @@ function  module:JoinGame(player)
                 print("Hit "..hit.Name .. " for ".. value.Value.." points!")
                 mallet.hit:Play()
                 self:RemoveMole(hit)
+                if value.Value == 0 then
+                    --temp disable player
+                    print("stun")
+                    task.spawn(function()
+                        self.MessageTarget.Value = ""..player.UserId
+                        self.Message.Value = "Disable"
+                        task.wait(1)
+                        self.MessageTarget.Value = ""..player.UserId
+                        self.Message.Value = "Enable"
+                    end)
+                end
                 --update my personal info
                 self.MessageTarget.Value = player.UserId
                 data.Score += value.Value
-                -- format message
+                --[[ format message
                 local messageData = {}
                 messageData["MyScore"] = data.Score
                 self.Message.Value = HttpService:JSONEncode(messageData)
-                -- update team info
                 task.wait()
-                messageData  = {}
+                ]]
+                -- update team info
+                local messageData  = {}
                 self.MessageTarget.Value = ""--everybody
                 self[team].Score += value.Value
                 messageData[team.."Score"] = self[team].Score

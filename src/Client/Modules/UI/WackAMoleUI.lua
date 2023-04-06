@@ -5,6 +5,7 @@ local HttpsService = game:GetService("HttpService")
 local Template = ReplicatedStorage.Assets.UI.MiniGames.WackAMoleUI
 local Player = game:GetService("Players").LocalPlayer
 local UI = Player:WaitForChild("PlayerGui")
+local controls = require(Player.PlayerScripts.PlayerModule):GetControls()
 module.ID = script.Name
 
 function module.new()
@@ -36,8 +37,13 @@ function module:HandleMessage(message)
             end
         end
     else
-        self.TitleBar.Message.Visible = message ~= ""
-        self.TitleBar.Message.Text = message
+        if message == "Enable" then
+            controls:Enable()
+        else
+            if message == "Disable" then
+                controls:Disable()
+            end
+        end
     end
 end
 
