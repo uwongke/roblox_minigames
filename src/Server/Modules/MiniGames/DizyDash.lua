@@ -95,9 +95,19 @@ function module:PrepGame()
 
     task.spawn(function()
         while self.GameOver.Value == false do
-            task.wait(math.random(2,3))
-            self.MessageTarget.Value = ""
-            self.Message.Value = "Inverse"
+            task.wait(math.random(.5,2.5))
+            local countDown =3
+            while countDown > 0 do
+                messageData.Message = countDown
+                self.Message.Value = HttpService:JSONEncode(messageData)
+                task.wait(.5)
+                countDown -= 1
+            end
+            messageData.Message = "Inverse"
+            self.Message.Value = HttpService:JSONEncode(messageData)
+            task.wait(.5)
+            messageData.Message = ""
+            self.Message.Value = HttpService:JSONEncode(messageData)
         end
     end)
 
@@ -154,19 +164,6 @@ function  module:JoinGame(player)
         return true
     end
     return false
-end
-
-function module:AttachPotatoToPlayer(player)
-    local character = player.Character
-    local hatAttach = character:FindFirstChild("HatAttachment", true)
-    if hatAttach then
-        local constraint = self.HotPotato:WaitForChild("RigidConstraint")
-        constraint.Enabled = false
-        self.HotPotato.Parent = character
-        constraint.Attachment1 = hatAttach
-        task.wait()
-        constraint.Enabled = true
-    end
 end
 
 function module:Destroy()

@@ -179,19 +179,33 @@ end
 
 function module:Update(time)
     if not self.GameOver.Value then
+        local laserOn = self.Game.LaserX.Transparency < .5
+        if laserOn then
+            local parts = self.Game.LaserX:GetTouchingParts()
+            for _,v in pairs(parts) do
+                if v == self.Game.LaserZ then
+                    continue
+                end
+                self:KillPlayer(v.Parent)
+            end
+
+            parts = self.Game.LaserZ:GetTouchingParts()
+            for _,v in pairs(parts) do
+                if v == self.Game.LaserX then
+                    continue
+                end
+                self:KillPlayer(v.Parent)
+            end
+            return
+        end
+
         if self.LaserVelocity.X > 0 and self.Game.LaserX.Position.X < self.Game.Walls.Right.Position.X or
             self.LaserVelocity.X < 0 and self.Game.LaserX.Position.X > self.Game.Walls.Left.Position.X then
-                if self.Game.LaserX.Transparency < .5 then
-                    return
-                end
             self.Game.LaserX.Position += Vector3.xAxis * self.LaserVelocity.X * laserSpeed * time
         end
         -- the z axis is a little wonky due to perspective of the scientist
         if self.LaserVelocity.Z > 0 and self.Game.LaserZ.Position.Z > self.Game.Walls.Back.Position.Z or
             self.LaserVelocity.Z < 0 and self.Game.LaserZ.Position.Z < self.Game.Walls.Front.Position.Z then
-                if self.Game.LaserZ.Transparency < .5 then
-                    return
-                end
             self.Game.LaserZ.Position += Vector3.zAxis * self.LaserVelocity.Z * -laserSpeed * time
         end
     end

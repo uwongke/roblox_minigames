@@ -2,6 +2,7 @@ local module = {}
 module.__index = module
 
 local Players = nil
+local PlayerCollisionGroupId = "Player"
 
 function  module.GetPlayers()
     return Players
@@ -20,11 +21,24 @@ function module.ActivatePlayers(Player)
     end
 end
 
+function module.onDescendantAdded(descendant)
+    -- Set collision group for any part descendant
+    if descendant:IsA("BasePart") then
+        descendant.CollisionGroup = PlayerCollisionGroupId
+    end
+end
+
 function module.new(Player)
     local data = {}
     data.Player = Player
-    Player.CharacterAdded:Connect(function()
-        local humanoid = Player.Character.Humanoid
+    Player.CharacterAdded:Connect(function(character)
+        -- Process existing and new descendants for physics setup
+        for _, descendant in pairs(character:GetDescendants()) do
+            module.onDescendantAdded(descendant)
+        end
+        character.DescendantAdded:Connect(module.onDescendantAdded)
+
+        local humanoid = character.Humanoid
         humanoid.Died:Connect(function()
             data.Alive = false
         end)
