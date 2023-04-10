@@ -105,8 +105,8 @@ function module:PrepGame()
     local spawns = math.ceil(#self.Red.MoleSpawns / 5)
     while spawns > 0 do
         spawns -= 1
-        self:SpawnMole(self.Red.MoleSpawns)
-        self:SpawnMole(self.Blue.MoleSpawns)
+        self:SpawnMole(self.Red)
+        self:SpawnMole(self.Blue)
     end
 
     count = duration
@@ -147,17 +147,17 @@ function module:SpawnMole(origin)
         return
     end
     -- look for a spawn point not already occupied with a spawn
+    local spawns = origin.MoleSpawns
     local spawned = true
     local spawnPoint = nil
     while spawned do
-        spawnPoint = origin[math.random(1, #origin)]
+        spawnPoint = spawns[math.random(1, #spawns)]
         spawned = spawnPoint.Spawn
     end
     -- determine if the spawned mole is "Gold" or Normal
-    local teamData = origin.Parent.Name == "Red" and self.Red or self.Blue
-    local goldRarity = teamData.GoldRarity
-    local badRarity  = teamData.BadRarity
-    local buffRarity = teamData.BuffRarity
+    local goldRarity = origin.GoldRarity
+    local badRarity  = origin.BadRarity
+    local buffRarity = origin.BuffRarity
     local value = math.random(1, 100)
     local molePrefix = ""
     if value < goldRarity then
@@ -186,10 +186,7 @@ function module:SpawnMole(origin)
     end)
 end
 -- hit a mole with a mallet
-function module:RemoveMole(mole)
-    --determine if the mole was a part of the red or blue team
-    local origin = mole.Parent.Parent.Parent == self.Red.MoleContainer
-    and self.Red.MoleSpawns or self.Blue.MoleSpawns
+function module:RemoveMole(mole, origin)
     --find the spawn point for the corresponding team and make sure it knows it is being despawned and replace it
     for _,spawnPoint in ipairs(origin) do
         if spawnPoint.Spawn == mole then
@@ -227,7 +224,7 @@ function  module:JoinGame(player)
             if value and mallet.Swinging.Value then
                 print("Hit "..hit.Name .. " for ".. value.Value.." points!")
                 mallet.hit:Play()
-                self:RemoveMole(hit)
+                self:RemoveMole(hit, self[team])
                 if value.Value == -1 then
                     --temp disable player
                     print("stun")
@@ -246,8 +243,8 @@ function  module:JoinGame(player)
                         self[team].BadRarity  -= 1
                         self[team].BuffRarity -= 1
                         --adds 2 additional moles that will spawn for your side (stacks)
-                        self.SpawnMole(self[team].MoleSpawns)
-                        self.SpawnMole(self[team].MoleSpawns)
+                        self.SpawnMole(self[team])
+                        self.SpawnMole(self[team])
                     end
                 end
                 --update my personal info
