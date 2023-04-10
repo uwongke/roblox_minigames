@@ -447,7 +447,7 @@ end
 
 function module:Destroy()
     --clean up
-    task.cancel(self.ElapsedTimeThread)
+    --task.cancel(self.ElapsedTimeThread)
     for _, thread in ipairs(self.SpawnerThreads) do
         task.cancel(thread)
     end
