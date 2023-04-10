@@ -9,7 +9,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local ServerStorage = game:GetService("ServerStorage")
 local MiniGames = ServerStorage.Modules.MiniGames
-local Games = {}
 local Lobby = workspace.SpawnLocation
 local PlayerManager = require(ServerStorage.Modules.PlayerData)
 local MiniGameUtils = require(ServerStorage.Modules.MiniGameUtils)
@@ -27,7 +26,6 @@ local Module = Knit.CreateService {
     };
 }
 
-local FORCE_MINIGAME = nil -- set to nil when not in use
 function Module:ChooseMiniGame(gameName)
     self.Client.MessageUpdate:FireAll("selecting game "..gameName)
     local currentPlayers = PlayerManager.GetPlayers()
@@ -37,6 +35,8 @@ function Module:ChooseMiniGame(gameName)
     if self.CurrentGame then
         return
     end
+
+    print("got", Games[gameName])
     if Games[gameName] then
         local game = Games[gameName]
         self.CurrentGame = game.new(GameSpawn)
@@ -112,9 +112,13 @@ function Module:ChooseRandomMiniGame()
     local randomItem  = self.ValidGames[randomIndex]
     self.Client.MessageUpdate:FireAll("Choosing Random Mini Game")
     task.wait(3)
-    self:ChooseMiniGame(FORCE_MINIGAME or randomItem.Name)
+    self:ChooseMiniGame(self.FORCE_MINIGAME or randomItem.Name)
+    if self.FORCE_MINIGAME then
+        self.FORCE_MINIGAME = nil
+    else
+        table.remove(self.ValidGames, randomIndex)
+    end
     -- print(self.ValidGames)
-    table.remove(self.ValidGames, randomIndex)
     -- print(self.ValidGames)
 end
 
@@ -135,7 +139,7 @@ function Module.Client:HandleMessage(player, message)
 end
 
 function Module:KnitStart()
-
+    self.FORCE_MINIGAME = nil -- set to nil when not in use
 end
 
 function Module:KnitInit()
