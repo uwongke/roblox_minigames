@@ -14,11 +14,11 @@ local Waypoints = BezierTween.Waypoints
 local SentHeightEvent:RemoteEvent = Extras.SentHeightEvent
 
 local jumpAnimation = Instance.new("Animation")
-jumpAnimation.AnimationId = "rbxassetid://12784752964"
+jumpAnimation.AnimationId = "rbxassetid://13073159238"
 local idleAnimation = Instance.new("Animation")
-idleAnimation.AnimationId = "rbxassetid://12784778843"
+idleAnimation.AnimationId = "rbxassetid://13073164321"
 local fallAnimation = Instance.new("Animation")
-fallAnimation.AnimationId = "rbxassetid://12786901163"
+fallAnimation.AnimationId = "rbxassetid://13073167290"
 
 local ClimberControls = {
     Left = Enum.KeyCode.A,
