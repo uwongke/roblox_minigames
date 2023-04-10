@@ -24,3 +24,6 @@ Fusion = "elttob/fusion@0.1.1-beta"
 LuaEnum = "corecii/lua-enum-simple@0.1.0"
 WaitFor = "sleitnick/wait-for@0.2.1"
 Janitor = "howmanysmall/janitor@^1.14.1"
+
+[server-dependencies]
+Cmdr = "evaera/cmdr@1.9.0"

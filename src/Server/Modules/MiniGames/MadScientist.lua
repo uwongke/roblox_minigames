@@ -29,6 +29,7 @@ function module:PrepGame()
     self.Subjects = {}
     self.ScientistChair = self.Game.Seat
     self.LaserVelocity = Vector3.zero
+    self.Started = false
     
     messageData.Message = self.Game.Name .. " is ready"
     self.Message.Value = HttpService:JSONEncode(messageData)
@@ -66,7 +67,7 @@ function module:PrepGame()
     messageData.Message = ""
     self.Message.Value = HttpService:JSONEncode(messageData)
     messageData.Message = nil--don't want a blank message to override any other messages that may come up during game play
-
+    self.Started = true
     task.spawn(function()
         self:SetUpLaser(self.Game.LaserX)
         self:SetUpLaser(self.Game.LaserZ)
@@ -178,7 +179,7 @@ function  module:JoinGame(player)
 end
 
 function module:Update(time)
-    if not self.GameOver.Value then
+    if not self.GameOver.Value and self.Started then
         local laserOn = self.Game.LaserX.Transparency < .5
         if laserOn then
             local parts = self.Game.LaserX:GetTouchingParts()
