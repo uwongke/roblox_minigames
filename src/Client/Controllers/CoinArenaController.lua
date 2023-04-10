@@ -12,9 +12,9 @@ local player = Players.LocalPlayer
 local mouse = player:GetMouse()
 
 local punchAnimation:Animation = Instance.new("Animation")
-punchAnimation.AnimationId = "rbxassetid://12715002219"
+punchAnimation.AnimationId = "rbxassetid://13072788048"
 local hitAnimation:Animation = Instance.new("Animation")
-hitAnimation.AnimationId = "rbxassetid://12723448753"
+hitAnimation.AnimationId = "rbxassetid://13072803055"
 
 local RaycastHitbox = require(MiniGameExtras.RaycastHitboxV4)
 local Hitbox --- to be initialized when equipped
