@@ -225,7 +225,7 @@ function  module:JoinGame(player)
                 print("Hit "..hit.Name .. " for ".. value.Value.." points!")
                 mallet.hit:Play()
                 self:RemoveMole(hit, self[team])
-                if value.Value == -1 then
+                if hit.Name == "BadMole" then
                     --temp disable player
                     print("stun")
                     task.spawn(function()
@@ -236,7 +236,7 @@ function  module:JoinGame(player)
                         self.Message.Value = "Enable"
                     end)
                 else
-                    if value.Value == 0 then
+                    if hit.Name == "BuffMole" then
                         --buffs chances of gold moles and reduces chances of bad and buffs
                         -- starts at 10%,10%,10% split between the 3 types and will end with 30%,0%,0%
                         self[team].GoldRarity += 2
