@@ -22,13 +22,19 @@ function module.new(SpawnLocation)
         Players = {},
         Score = 0,
         MoleContainer = data.Game.RedSpawn.Model.Fog,
-        MoleSpawns = {}
+        MoleSpawns = {},
+        GoldRarity = 10,
+        BadRarity  = 10,
+        BuffRarity = 10
     }
     data.Blue = {
         Players = {},
         Score = 0,
         MoleContainer = data.Game.BlueSpawn.Model.Fog,
-        MoleSpawns = {}
+        MoleSpawns = {},
+        GoldRarity = 10,
+        BadRarity  = 10,
+        BuffRarity = 10
     }
     setmetatable(data,module)
     task.spawn(function()
@@ -148,8 +154,10 @@ function module:SpawnMole(origin)
         spawned = spawnPoint.Spawn
     end
     -- determine if the spawned mole is "Gold" or Normal
-    local goldRarity = 10 -- percent
-    local badRarity = 10
+    local teamData = origin.Parent.Name == "Red" and self.Red or self.Blue
+    local goldRarity = teamData.GoldRarity
+    local badRarity  = teamData.BadRarity
+    local buffRarity = teamData.BuffRarity
     local value = math.random(1, 100)
     local molePrefix = ""
     if value < goldRarity then
@@ -157,6 +165,10 @@ function module:SpawnMole(origin)
     else
         if value > 100 - badRarity then
             molePrefix = "Bad"
+        else
+            if value < goldRarity + buffRarity then
+                molePrefix = "Buff"
+            end
         end
     end
     local mole = Extras[molePrefix.."Mole"]:Clone()
@@ -216,7 +228,7 @@ function  module:JoinGame(player)
                 print("Hit "..hit.Name .. " for ".. value.Value.." points!")
                 mallet.hit:Play()
                 self:RemoveMole(hit)
-                if value.Value == 0 then
+                if value.Value == -1 then
                     --temp disable player
                     print("stun")
                     task.spawn(function()
@@ -226,16 +238,21 @@ function  module:JoinGame(player)
                         self.MessageTarget.Value = ""..player.UserId
                         self.Message.Value = "Enable"
                     end)
+                else
+                    if value.Value == 0 then
+                        --buffs chances of gold moles and reduces chances of bad and buffs
+                        -- starts at 10%,10%,10% split between the 3 types and will end with 30%,0%,0%
+                        self[team].GoldRarity += 2
+                        self[team].BadRarity  -= 1
+                        self[team].BuffRarity -= 1
+                        --adds 2 additional moles that will spawn for your side (stacks)
+                        self.SpawnMole(self[team].MoleSpawns)
+                        self.SpawnMole(self[team].MoleSpawns)
+                    end
                 end
                 --update my personal info
                 self.MessageTarget.Value = player.UserId
                 data.Score += value.Value
-                --[[ format message
-                local messageData = {}
-                messageData["MyScore"] = data.Score
-                self.Message.Value = HttpService:JSONEncode(messageData)
-                task.wait()
-                ]]
                 -- update team info
                 local messageData  = {}
                 self.MessageTarget.Value = ""--everybody
