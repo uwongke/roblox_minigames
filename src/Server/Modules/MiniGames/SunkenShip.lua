@@ -21,7 +21,7 @@ local Janitor = require(ReplicatedStorage.Packages.Janitor)
 local PivotTween = require(ReplicatedStorage.PivotTween)
 local ServerComm = require(ReplicatedStorage.Packages.Comm).ServerComm
 
-local SunkenShipComm = ServerComm.new(ReplicatedStorage, "ShipComm")
+local SunkenShipComm = ServerComm.new(ReplicatedStorage, "FishComm")
 local FeedbackEvent = SunkenShipComm:CreateSignal("Feedback")
 
 local GAME_DURATION = 60

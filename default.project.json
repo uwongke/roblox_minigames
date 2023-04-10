@@ -29,12 +29,7 @@
         "ServerStorage": {
             "$ignoreUnknownInstances": true,
             "$className": "ServerStorage",
-            "$path": "src/Server",
-
-            "Packages": {
-                "$className": "Folder",
-                "$path": "ServerPackages"
-            }
+            "$path": "src/Server"
         },
 
         "StarterPlayer": {
