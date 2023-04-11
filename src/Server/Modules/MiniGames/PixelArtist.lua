@@ -18,7 +18,9 @@ local ScreenButton = GameExtras.ScreenButton
 local HitBox = GameExtras.HitBox
 
 local GridSize = {7, 7}
-local GridBuffer = .5
+local GridBuffer = 1.5
+local InactiveColor = Color3.fromRGB(255, 135, 36)
+local ActiveColor = Color3.fromRGB(0, 255, 0)
 
 local Patterns = require(game:GetService("ReplicatedStorage"):WaitForChild("PixelArtistPatterns"))
 
@@ -194,9 +196,9 @@ function module:TurnOnScreens(playerName, target)
             local screenButton = screen:FindFirstChild("Screen" .. x .. y)
             if screenButton then
                 if target[y][x] == 1 then
-                    screenButton.Color = Color3.new(0,0,0)
+                    screenButton.Color = ActiveColor
                 else
-                    screenButton.Color = Color3.new(1, 1, 1)
+                    screenButton.Color = InactiveColor
                 end
             end
         end
@@ -213,7 +215,7 @@ function module:ClearScreens()
                 for y = 1, GridSize[2], 1 do
                     local screenButton = screen:FindFirstChild("Screen" .. x .. y)
                     if screenButton then
-                        screenButton.Color = Color3.new(1, 1, 1)
+                        screenButton.Color = InactiveColor
                     end
                 end
             end
@@ -227,7 +229,7 @@ function module:ClearPlayerGrids()
         local buttons = room:FindFirstChild("Buttons")
         if buttons then
             for _, button in ipairs(buttons:GetChildren()) do
-              button.Color = Color3.new(1, 1, 1)
+              button.Color = InactiveColor
             end
         end
     end

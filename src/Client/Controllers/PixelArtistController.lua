@@ -22,6 +22,8 @@ local DefaultTarget = {
     {0,0,0,0,0,0,0}
 }
 local GridSize = {7, 7}
+local InactiveColor = Color3.fromRGB(255, 135, 36)
+local ActiveColor = Color3.fromRGB(0, 255, 0)
 
 function PixelArtistController:KnitInit()
 	--// services
@@ -62,7 +64,7 @@ function PixelArtistController:ClearPlayerArray()
     local buttons = self.Room:FindFirstChild("Buttons")
     if buttons then
         for _, button in ipairs(buttons:GetChildren()) do
-          button.Color = Color3.new(1, 1, 1)
+          button.Color = InactiveColor
         end
     end
 end
@@ -81,10 +83,10 @@ function PixelArtistController:SetupButtons()
                 local x = button:GetAttribute("XPos")
                 local y = button:GetAttribute("YPos")
             if button.Color.R == 0 then
-                button.Color = Color3.new(1,1,1)
+                button.Color = InactiveColor
                     self.PlayerArray[y][x] = 0
             else
-                button.Color = Color3.new(0,0,0)
+                button.Color = ActiveColor
                 self.PlayerArray[y][x] = 1
             end
             --print(self.PlayerArrays[player.Name])
@@ -136,7 +138,7 @@ function PixelArtistController:ClearPlayerGrids()
         local buttons = self.Room:FindFirstChild("Buttons")
         if buttons then
             for _, button in ipairs(buttons:GetChildren()) do
-              button.Color = Color3.new(1, 1, 1)
+              button.Color = InactiveColor
             end
         end
         self:ClearPlayerArray()
