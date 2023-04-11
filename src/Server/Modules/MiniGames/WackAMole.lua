@@ -188,7 +188,7 @@ end
 -- hit a mole with a mallet
 function module:RemoveMole(mole, origin)
     --find the spawn point for the corresponding team and make sure it knows it is being despawned and replace it
-    for _,spawnPoint in ipairs(origin) do
+    for _,spawnPoint in ipairs(origin.MoleSpawns) do
         if spawnPoint.Spawn == mole then
             mole:Destroy()
             spawnPoint.Spawn = nil
@@ -243,8 +243,8 @@ function  module:JoinGame(player)
                         self[team].BadRarity  -= 1
                         self[team].BuffRarity -= 1
                         --adds 2 additional moles that will spawn for your side (stacks)
-                        self.SpawnMole(self[team])
-                        self.SpawnMole(self[team])
+                        self:SpawnMole(self[team])
+                        self:SpawnMole(self[team])
                     end
                 end
                 --update my personal info
