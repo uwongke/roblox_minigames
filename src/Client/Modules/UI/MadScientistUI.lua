@@ -46,7 +46,7 @@ function module:HandleMessage(message)
             self:DisableMovement()
             self.Controls.Visible = true
             task.spawn(function()
-                task.wait(5)
+                task.wait(6)
                 self.Controls:Destroy()
             end)
         end
