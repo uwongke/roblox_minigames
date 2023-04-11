@@ -108,7 +108,7 @@ end
 
 function module:FireLaser(laser)
     local tweenInfo = TweenInfo.new(
-        1, -- Time
+        2, -- Time
         Enum.EasingStyle.Linear, -- EasingStyle
         Enum.EasingDirection.Out, -- EasingDirection
         0, -- RepeatCount (when less than zero the tween will loop indefinitely)
