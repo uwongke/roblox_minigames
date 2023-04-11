@@ -36,6 +36,7 @@ end
 function PixelArtistController:KnitStart()
     self.PixelArtistService.RoomReady:Connect(function()
 		self:SetupButtons()
+        Players.LocalPlayer.Character.Humanoid.JumpHeight = 12.5
 	end)
     self.PixelArtistService.TargetChosen:Connect(function(target)
 		self.Target = target
@@ -46,6 +47,9 @@ function PixelArtistController:KnitStart()
         self.CanPlay = false
         self:ClearPlayerArray()
 	end)
+    self.PixelArtistService.EndGame:Connect(function()
+        self:EndGame()
+    end)
 end
 function PixelArtistController:ClearPlayerArray()
     for x = 1, GridSize[1], 1 do
@@ -64,7 +68,7 @@ function PixelArtistController:ClearPlayerArray()
 end
 
 function PixelArtistController:EndGame()
-
+    Players.LocalPlayer.Character.Humanoid.JumpHeight = 7.2
 end
 function PixelArtistController:SetupButtons()
     self.Room = workspace.PixelArtist.Rooms:FindFirstChild("Room_" .. lPlayer.Name)
@@ -85,13 +89,20 @@ function PixelArtistController:SetupButtons()
             end
             --print(self.PlayerArrays[player.Name])
             button:SetAttribute("CanSwitch", false)
-            task.spawn(function()
-                task.wait(1)
-                button:SetAttribute("CanSwitch", true)
-                end)
                 self:WinCheck(player)
             end
-        end) 
+        end)
+        button.TouchEnded:Connect(function(hit)
+            local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
+            if hit.Name == "HitBox" and button:GetAttribute("CanSwitch") == false and self.CanPlay == true then
+            print("touch end")
+            task.spawn(function()
+                task.wait(.5)
+                print("can switch")
+                button:SetAttribute("CanSwitch", true)
+                end)
+            end
+        end)
     end
 end
 function PixelArtistController:WinCheck()
