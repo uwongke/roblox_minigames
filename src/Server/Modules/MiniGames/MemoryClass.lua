@@ -128,6 +128,7 @@ function module:PrepGame()
 
         task.wait(3)
         self.GameOver.Value = true
+        self:RemoveHealthBars()
         Knit.GetService("MemoryClassService").Client.EndGame:FireAll(self.ActivePlayers)
     end
     
@@ -153,7 +154,18 @@ function module:StopAnimationTracks(player, dontIdle)
    
     task.wait(.2)
 end
-
+function module:RemoveHealthBars()
+    for _, player in ipairs(self.ActivePlayers) do
+        local healthBB = player.Character.Head:FindFirstChild("HealthBBGui")
+        local wrongTracker = player.Character.Head:FindFirstChild("WrongTrackerBBGui")
+        if healthBB then
+            healthBB:Destroy()
+        end
+        if wrongTracker then
+            wrongTracker:Destroy()
+        end
+    end
+end
 function module:PlayerIncorrect(player)
     print("Incorrect!")
     local newRuler = Ruler:Clone()
@@ -193,6 +205,7 @@ function module:PlayerIncorrect(player)
                             end
                             self.StopGame = true
                             task.wait(3)
+                            self:RemoveHealthBars()
                             self.GameOver.Value = true
                             Knit.GetService("MemoryClassService").Client.EndGame:FireAll(self.ActivePlayers)
                         end
@@ -392,6 +405,7 @@ end
 
 function module:Destroy()
     --clean up
+    self:RemoveHealthBars()
     self.Game:Destroy()
     self = nil
 end
