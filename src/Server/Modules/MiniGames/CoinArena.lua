@@ -243,6 +243,7 @@ end
 
 function module:TouchedHazard(character, otherPartRoot)
     --print(otherCharacter)
+    if self.GameOver.Value == true then return end
     local canHit = character:FindFirstChild("CoinArena_CanHit")
     if not canHit then return end
     if canHit.Value == false then return end
@@ -309,19 +310,20 @@ function module:UpdateCoinDisplay(player, coins)
     
 end
 function module:TouchedCoin(coin, hit)
-    local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
-            if player then
-                local canCollect = player.Character:FindFirstChild("CoinArena_CanCollect")
-                if not canCollect then return end
-                if canCollect.Value == true then
+    if self.GameOver.Value == false then
+        local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
+        if player then
+            local canCollect = player.Character:FindFirstChild("CoinArena_CanCollect")
+            if not canCollect then return end
+            if canCollect.Value == true then
                     
-                    self.Players[player].Coins += coin:GetAttribute("Value")
-                    self:UpdateCoinDisplay(player,self.Players[player].Coins)
-                    Knit.GetService("CoinArenaService").Client.GotCoin:Fire(player, self.Players[player].Coins, coin:GetAttribute("Value"))
-                    coin:Destroy()
-                end
-                
-            end
+                self.Players[player].Coins += coin:GetAttribute("Value")
+                self:UpdateCoinDisplay(player,self.Players[player].Coins)
+                Knit.GetService("CoinArenaService").Client.GotCoin:Fire(player, self.Players[player].Coins, coin:GetAttribute("Value"))
+                coin:Destroy()
+            end     
+        end
+    end
 end
 --[[
 function  module:SpawnCoinsOld()
@@ -450,6 +452,16 @@ function module:Destroy()
     --task.cancel(self.ElapsedTimeThread)
     for _, thread in ipairs(self.SpawnerThreads) do
         task.cancel(thread)
+    end
+    for _, player in ipairs(self.ActivePlayers) do
+        local coinbb = player.Character.Head:FindFirstChild("CoinBillboardGui")
+        if coinbb then
+            coinbb:Destroy()
+        end
+        local crownbb = player.Character.Head:FindFirstChild("CrownBillboardUI")
+        if crownbb then
+            crownbb:Destroy()
+        end
     end
     self.SpawnerThreads = {}
     self.Game:Destroy()

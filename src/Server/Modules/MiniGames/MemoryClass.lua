@@ -25,17 +25,17 @@ local WrongTrackerBBGui:BillboardGui = GameExtras.WrongTrackerBBGui
 -- game vars
 local Directions = {"↑","↓","←","→"}
 local upAnimation = Instance.new("Animation")
-upAnimation.AnimationId = "rbxassetid://12884352932"
+upAnimation.AnimationId = "rbxassetid://13073136027"
 local leftAnimation = Instance.new("Animation")
-leftAnimation.AnimationId = "rbxassetid://12884440855"
+leftAnimation.AnimationId = "rbxassetid://13073144158"
 local rightAnimation = Instance.new("Animation")
-rightAnimation.AnimationId = "rbxassetid://12884475081"
+rightAnimation.AnimationId = "rbxassetid://13073147548"
 local downAnimation = Instance.new("Animation")
-downAnimation.AnimationId = "rbxassetid://12884503461"
+downAnimation.AnimationId = "rbxassetid://13073139581"
 local hurtAnimation = Instance.new("Animation")
-hurtAnimation.AnimationId = "rbxassetid://12920501525"
+hurtAnimation.AnimationId = "rbxassetid://13073153646"
 local idleAnimation = Instance.new("Animation")
-idleAnimation.AnimationId = "rbxassetid://12928571428"
+idleAnimation.AnimationId = "rbxassetid://13073150848"
 local ReciteWaitTime = 7
 
 function module.new(SpawnLocation)

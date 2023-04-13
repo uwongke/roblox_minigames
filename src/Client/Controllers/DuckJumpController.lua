@@ -18,7 +18,7 @@ local player = game:GetService("Players").LocalPlayer
 local duckAnimation = Instance.new("Animation")
 --duckAnimation.AnimationId = "rbxassetid://12635660851"  --crouch
 --duckAnimation.AnimationId = "rbxassetid://12635704901"  --prone
-duckAnimation.AnimationId = "rbxassetid://12707923089"
+duckAnimation.AnimationId = "rbxassetid://13073125628"
 
 function DuckJumpController:KnitInit()
 	--// services

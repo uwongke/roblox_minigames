@@ -22,6 +22,8 @@ local DefaultTarget = {
     {0,0,0,0,0,0,0}
 }
 local GridSize = {7, 7}
+local InactiveColor = Color3.fromRGB(255, 135, 36)
+local ActiveColor = Color3.fromRGB(0, 255, 0)
 
 function PixelArtistController:KnitInit()
 	--// services
@@ -36,6 +38,7 @@ end
 function PixelArtistController:KnitStart()
     self.PixelArtistService.RoomReady:Connect(function()
 		self:SetupButtons()
+        Players.LocalPlayer.Character.Humanoid.JumpHeight = 12.5
 	end)
     self.PixelArtistService.TargetChosen:Connect(function(target)
 		self.Target = target
@@ -46,6 +49,9 @@ function PixelArtistController:KnitStart()
         self.CanPlay = false
         self:ClearPlayerArray()
 	end)
+    self.PixelArtistService.EndGame:Connect(function()
+        self:EndGame()
+    end)
 end
 function PixelArtistController:ClearPlayerArray()
     for x = 1, GridSize[1], 1 do
@@ -58,13 +64,13 @@ function PixelArtistController:ClearPlayerArray()
     local buttons = self.Room:FindFirstChild("Buttons")
     if buttons then
         for _, button in ipairs(buttons:GetChildren()) do
-          button.Color = Color3.new(1, 1, 1)
+          button.Color = InactiveColor
         end
     end
 end
 
 function PixelArtistController:EndGame()
-
+    Players.LocalPlayer.Character.Humanoid.JumpHeight = 7.2
 end
 function PixelArtistController:SetupButtons()
     self.Room = workspace.PixelArtist.Rooms:FindFirstChild("Room_" .. lPlayer.Name)
@@ -77,21 +83,28 @@ function PixelArtistController:SetupButtons()
                 local x = button:GetAttribute("XPos")
                 local y = button:GetAttribute("YPos")
             if button.Color.R == 0 then
-                button.Color = Color3.new(1,1,1)
+                button.Color = InactiveColor
                     self.PlayerArray[y][x] = 0
             else
-                button.Color = Color3.new(0,0,0)
+                button.Color = ActiveColor
                 self.PlayerArray[y][x] = 1
             end
             --print(self.PlayerArrays[player.Name])
             button:SetAttribute("CanSwitch", false)
-            task.spawn(function()
-                task.wait(1)
-                button:SetAttribute("CanSwitch", true)
-                end)
                 self:WinCheck(player)
             end
-        end) 
+        end)
+        button.TouchEnded:Connect(function(hit)
+            local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
+            if hit.Name == "HitBox" and button:GetAttribute("CanSwitch") == false and self.CanPlay == true then
+            print("touch end")
+            task.spawn(function()
+                task.wait(.5)
+                print("can switch")
+                button:SetAttribute("CanSwitch", true)
+                end)
+            end
+        end)
     end
 end
 function PixelArtistController:WinCheck()
@@ -125,7 +138,7 @@ function PixelArtistController:ClearPlayerGrids()
         local buttons = self.Room:FindFirstChild("Buttons")
         if buttons then
             for _, button in ipairs(buttons:GetChildren()) do
-              button.Color = Color3.new(1, 1, 1)
+              button.Color = InactiveColor
             end
         end
         self:ClearPlayerArray()
