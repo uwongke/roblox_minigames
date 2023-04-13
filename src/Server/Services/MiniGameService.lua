@@ -139,7 +139,7 @@ function Module.Client:HandleMessage(player, message)
 end
 
 function Module:KnitStart()
-    self.FORCE_MINIGAME = nil -- set to nil when not in use
+    self.FORCE_MINIGAME = "CoinArena" -- set to nil when not in use
 end
 
 function Module:KnitInit()

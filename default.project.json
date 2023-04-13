@@ -1,5 +1,5 @@
 {
-    "name": "Boilerplate Project",
+    "name": "Suit Up Minigames",
     "globIgnorePaths": [
         "src/**/*.spec.lua",
         "Packages/**/*.spec.lua"
