@@ -218,10 +218,6 @@ function module:PrepGame()
         if coinbb then
             coinbb:Destroy()
         end
-        local crownbb = player.Character.Head:FindFirstChild("CrownBillboardUI")
-        if crownbb then
-            crownbb:Destroy()
-        end
     end
      Knit.GetService("CoinArenaService").Client.EndGame:FireAll()
 
@@ -458,10 +454,9 @@ function module:Destroy()
         if coinbb then
             coinbb:Destroy()
         end
-        local crownbb = player.Character.Head:FindFirstChild("CrownBillboardUI")
-        if crownbb then
-            crownbb:Destroy()
-        end
+    end
+    if self.CrownBB then
+        self.CrownBB:Destroy()
     end
     self.SpawnerThreads = {}
     self.Game:Destroy()
