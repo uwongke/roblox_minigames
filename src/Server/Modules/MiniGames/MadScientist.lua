@@ -9,6 +9,13 @@ local GameTemplate = ReplicatedStorage.Assets.MiniGames.MadScientist
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 local duration = 60
 local laserSpeed = 8
+-- i feel like this would only create confusion as to the function of the laser
+-- based on color when it doesn't have any effect on it at all
+local LaserColors = {
+    BrickColor.Red(),
+    BrickColor.Blue(),
+    BrickColor.Green()
+}
 
 function module.new(SpawnLocation)
     local data = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
@@ -29,6 +36,8 @@ function module:PrepGame()
     self.Subjects = {}
     self.ScientistChair = self.Game.Seat
     self.LaserVelocity = Vector3.zero
+    self.Started = false
+    self.LastAlpha = 0
     
     messageData.Message = self.Game.Name .. " is ready"
     self.Message.Value = HttpService:JSONEncode(messageData)
@@ -39,6 +48,7 @@ function module:PrepGame()
     task.wait(3)
     -- provide the 2 different win conditions to the players
     if self.Scientist then
+        self.Started = true
         self.MessageTarget.Value = ""..self.Scientist.UserId
         messageData.Message = "Hit All the players with the lasers before times up to win!"
         self.Message.Value = HttpService:JSONEncode(messageData)
@@ -67,10 +77,8 @@ function module:PrepGame()
     self.Message.Value = HttpService:JSONEncode(messageData)
     messageData.Message = nil--don't want a blank message to override any other messages that may come up during game play
 
-    task.spawn(function()
-        self:SetUpLaser(self.Game.LaserX)
-        self:SetUpLaser(self.Game.LaserZ)
-    end)
+    self:FireLaser(self.Game.LaserX)
+    self:FireLaser(self.Game.LaserZ)
 
     -- count down 
     count = duration
@@ -98,50 +106,21 @@ function module:PrepGame()
     self.Message.Value = HttpService:JSONEncode(messageData)
 end
 
-function module:SetUpLaser(laser)
-    laser.Touched:Connect(function(other)
-        if laser.Transparency >= .5 then
-            return
-        end
-        
-        self:KillPlayer(other.Parent)
-    end)
-    self:FireLaser(laser)
-end
-
-function module:KillPlayer(Character)
-    if Character == nil then
-        return
-    end
-    local humanoid:Humanoid = Character:FindFirstChild("Humanoid")
-    if humanoid == nil then
-        return
-    end
-    local player = Players:GetPlayerFromCharacter(Character)
-    local index = table.find(self.Subjects,player)
-    if index then
-        table.remove(self.Subjects, index)
-        humanoid.Health = 0
-        if #self.Subjects == 0 then
-            self.GameOver.Value = true
-            local messageData = {}
-            messageData.Message = "The Mad Scientist Won!"
-            self.Message.Value = HttpService:JSONEncode(messageData)
-        end
-    end
-end
-
 function module:FireLaser(laser)
     local tweenInfo = TweenInfo.new(
-        1, -- Time
+        2, -- Time
         Enum.EasingStyle.Linear, -- EasingStyle
         Enum.EasingDirection.Out, -- EasingDirection
-        -1, -- RepeatCount (when less than zero the tween will loop indefinitely)
+        0, -- RepeatCount (when less than zero the tween will loop indefinitely)
         true, -- Reverses (tween will reverse once reaching it's goal)
         2 -- DelayTime
     )
 
     local tween = TweenService:Create(laser, tweenInfo, { Transparency = 0})
+    tween.Completed:Connect(function()
+        laser.BrickColor = LaserColors[math.random(1,#LaserColors)]
+        self:FireLaser(laser)
+    end)
 
     tween:Play()
 end
@@ -157,6 +136,19 @@ function  module:JoinGame(player)
             table.insert(self.Subjects,player)
             MiniGameUtils.SpawnAroundPart(self.Game[team], player.Character)
         else
+            local success, image = pcall(function()
+                return game.Players:GetUserThumbnailAsync(
+                    player.UserId,
+                    Enum.ThumbnailType.AvatarBust,
+                    Enum.ThumbnailSize.Size60x60
+                )
+            end)
+            print(image)
+            if success and image then
+                for _,monitor in pairs(self.Game.Monitors:GetChildren()) do
+                    monitor.Texture.Texture = image
+                end
+            end
             self.MessageTarget.Value = ""..player.UserId
             self.Message.Value = team
             self.Scientist = player
@@ -178,21 +170,64 @@ function  module:JoinGame(player)
 end
 
 function module:Update(time)
-    if not self.GameOver.Value then
+    if not self.GameOver.Value and self.Started then
+        -- start turning on the laser when it is moving in a more visible direction
+        local rampingUp = self.Game.LaserX.Transparency - self.LastAlpha < 0
+        self.Game.LaserX.ParticleEmitter.Enabled = rampingUp
+        self.Game.LaserZ.ParticleEmitter.Enabled = rampingUp
+        self.LastAlpha = self.Game.LaserX.Transparency
+
+        local laserOn = self.Game.LaserX.Transparency < .5
+        
+        if laserOn then
+            local parts = self.Game.LaserX:GetTouchingParts()
+            for _,v in pairs(parts) do
+                if v == self.Game.LaserZ then
+                    continue
+                end
+                self:KillPlayer(v.Parent)
+            end
+
+            parts = self.Game.LaserZ:GetTouchingParts()
+            for _,v in pairs(parts) do
+                if v == self.Game.LaserX then
+                    continue
+                end
+                self:KillPlayer(v.Parent)
+            end
+            return
+        end
+
         if self.LaserVelocity.X > 0 and self.Game.LaserX.Position.X < self.Game.Walls.Right.Position.X or
             self.LaserVelocity.X < 0 and self.Game.LaserX.Position.X > self.Game.Walls.Left.Position.X then
-                if self.Game.LaserX.Transparency < .5 then
-                    return
-                end
             self.Game.LaserX.Position += Vector3.xAxis * self.LaserVelocity.X * laserSpeed * time
         end
         -- the z axis is a little wonky due to perspective of the scientist
         if self.LaserVelocity.Z > 0 and self.Game.LaserZ.Position.Z > self.Game.Walls.Back.Position.Z or
             self.LaserVelocity.Z < 0 and self.Game.LaserZ.Position.Z < self.Game.Walls.Front.Position.Z then
-                if self.Game.LaserZ.Transparency < .5 then
-                    return
-                end
             self.Game.LaserZ.Position += Vector3.zAxis * self.LaserVelocity.Z * -laserSpeed * time
+        end
+    end
+end
+
+function module:KillPlayer(Character)
+    if Character == nil then
+        return
+    end
+    local humanoid:Humanoid = Character:FindFirstChild("Humanoid")
+    if humanoid == nil then
+        return
+    end
+    local player = Players:GetPlayerFromCharacter(Character)
+    local index = table.find(self.Subjects,player)
+    if index then
+        table.remove(self.Subjects, index)
+        humanoid.Health = 0
+        if #self.Subjects == 0 then
+            self.GameOver.Value = true
+            local messageData = {}
+            messageData.Message = "The Mad Scientist Won!"
+            self.Message.Value = HttpService:JSONEncode(messageData)
         end
     end
 end

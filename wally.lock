@@ -13,6 +13,11 @@ version = "0.1.1-beta"
 dependencies = []
 
 [[package]]
+name = "evaera/cmdr"
+version = "1.9.0"
+dependencies = []
+
+[[package]]
 name = "evaera/promise"
 version = "4.0.0"
 dependencies = []
