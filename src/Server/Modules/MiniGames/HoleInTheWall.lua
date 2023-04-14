@@ -65,6 +65,29 @@ function module:PrepGame()
             doorPart.Anchored = false
         end
     end
+
+    --set up check point system 
+    local fallChecker = self.Game:WaitForChild("FallCheck")
+    if fallChecker then
+        fallChecker.Touched:Connect(function(other)
+            local player = Players:GetPlayerFromCharacter(other.Parent)
+            if player then
+                local lastCheckPoint = self.Players[player].CheckPoint
+                MiniGameUtils.SpawnAroundPart(lastCheckPoint, player.Character)
+            end
+        end)
+
+        local checkPoints = self.Game:WaitForChild("CheckPoints")
+        for _,checkPoint in pairs(checkPoints:GetChildren()) do
+            checkPoint.Touched:Connect(function(other)
+                local player = Players:GetPlayerFromCharacter(other.Parent)
+                if player then
+                    self.Players[player].CheckPoint = checkPoint
+                end
+            end)
+        end
+    end
+
     self.MessageTarget.Value = ""
     messageData.Message = self.Game.Name .. " is ready"
     self.Message.Value = HttpService:JSONEncode(messageData)
@@ -119,7 +142,8 @@ function  module:JoinGame(player)
         local data = {
             Time = 0,
             Name = player.DisplayName,
-            Position = 1
+            Position = 1,
+            CheckPoint = self.Game.GameStart
         }
         self.Players[player] = data
         MiniGameUtils.SpawnAroundPart(self.Game.GameStart, player.Character)
