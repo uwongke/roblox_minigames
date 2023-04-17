@@ -23,6 +23,8 @@ function module:PrepGame()
         Message="",
         Timer=""
     }
+
+    self.Players = {}
     
     messageData.Message = self.Game.Name .. " is ready"
     self.Message.Value = HttpService:JSONEncode(messageData)
@@ -45,6 +47,7 @@ function module:PrepGame()
         task.wait(1)
         count -= 1
     end
+    self.Players[self.CurrentHotPotato].StartTime = DateTime.now().UnixTimestampMillis
     messageData.Message = "Go!"
     self.Message.Value = HttpService:JSONEncode(messageData)
     task.wait(1)
@@ -67,6 +70,13 @@ function module:PrepGame()
     end
 
     self.GameOver.Value = true
+
+    local function Sort(Value1, Value2)
+        return Value1.Total > Value2.Total
+    end
+    
+    table.sort(self.Players, Sort)
+    print(self.Players)
 
     messageData.Message="Times up!"
     self.Message.Value = HttpService:JSONEncode(messageData)
@@ -96,6 +106,10 @@ function  module:JoinGame(player)
             self.Message.Value = HttpService:JSONEncode(messageData)
         end
 
+        self.Players[player] = {
+            Total = 0
+        }
+
         MiniGameUtils.SpawnAroundPart(self.Game.Origin, player.Character)
 
         local hitbox = Extras.HitBox:Clone()
@@ -112,12 +126,21 @@ function  module:JoinGame(player)
             local otherPlayer = Players:GetPlayerFromCharacter(character)
             if otherPlayer then
                 if otherPlayer ~= self.LastHotPotato and otherPlayer ~= self.CurrentHotPotato then
-                    self.LastHotPotato = self.CurrentHotPotato
+                    local now = DateTime.now().UnixTimestampMillis
+                    local startTime = self.Players[player].StartTime
+                    self.Players[player].Total += now - startTime
+                    self.LastHotPotato = player
                     self.CurrentHotPotato = otherPlayer
+                    self.Players[otherPlayer].StartTime = now
                     self:AttachPotatoToPlayer(otherPlayer)
                     -- message the player that they now are holding the hot potato
                     self.MessageTarget.Value = ""..otherPlayer.UserId
                     self.Message.Value = HttpService:JSONEncode(messageData)
+                    -- clear out the message
+                    task.wait(3)
+                    local md = {Message = ""}
+                    self.MessageTarget.Value = ""..otherPlayer.UserId
+                    self.Message.Value = HttpService:JSONEncode(md)
                 end
             end
         end)
@@ -125,6 +148,9 @@ function  module:JoinGame(player)
         self.GameOver.Changed:Connect(function(newVal)
             if newVal then
                 if player == self.CurrentHotPotato then
+                    local now = DateTime.now().UnixTimestampMillis
+                    local startTime = self.Players[player].StartTime
+                    self.Players[player].Total += now - startTime
                     local humanoid:Humanoid = player.Character:FindFirstChild("Humanoid")
                     humanoid.Health = 0
                 else
