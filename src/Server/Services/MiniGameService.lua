@@ -143,6 +143,8 @@ function Module:KnitStart()
 end
 
 function Module:KnitInit()
+    if true then return end -- disables service for the meantime
+
     for _,game in MiniGames:GetChildren() do
         Games[game.Name] = require(game)
     end
