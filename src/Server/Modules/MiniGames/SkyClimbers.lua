@@ -20,8 +20,9 @@ local Extras = ReplicatedStorage.Assets.MiniGameExtras.SkyClimbers
 local Lane = Extras.Lane
 local Platform = Extras.Platform
 local SentHeightEvent:RemoteEvent = Extras.SentHeightEvent
+local DirectionBB:BillboardGui = Extras.DirectionBB
 --game vars
-local duration = 30
+local duration = 30000
 local laneLength = 2300
 local distanceBetweenPlatforms = 10
 local laneBuffer = 80
@@ -174,7 +175,8 @@ function  module:JoinGame(player)
         local data = {
             Time = 0,
             Name = player.DisplayName,
-            Position = self.LaneCount
+            Position = self.LaneCount,
+            Height = 0
         }
         
         self.Players[player] = data
@@ -188,7 +190,7 @@ function  module:JoinGame(player)
        Knit.GetService("SkyClimbersService").Client.JoinedGame:Fire(player, laneLength, data.Position, platformPoints)
        --local lane = self.Game.Lanes:FindFirstChild("Lane"..data.Position)
        player.Character:SetPrimaryPartCFrame(CFrame.new(newLane.PlayerSpawn.Position))
-       player.Character.HumanoidRootPart.Anchored = true
+       --player.Character.HumanoidRootPart.Anchored = true
         --local HRP =  player.Character.HumanoidRootPart
         --local finish = self.Game.Lanes:FindFirstChild("Lane"..data.Position).Finish
         --HRP.CFrame = CFrame.lookAt(HRP.Position, Vector3.new(finish.Position.X, HRP.Position.Y, finish.Position.Z))
@@ -228,11 +230,15 @@ function module:PrepLane(lane)
         --local orientation = lane.Start.Orientation
         --* CFrame.Angles(math.rad(orientation.X),math.rad(orientation.Y),math.rad(orientation.Z))
         local x
+        local newDirectionBB = DirectionBB:Clone()
         if point == "L" then
             x = - 10
+            newDirectionBB.Frame.TextLabel.Text = "A"
         else
             x = 10
+            newDirectionBB.Frame.TextLabel.Text = "D"
         end
+        newDirectionBB.Parent = newPlatform
         local platformPosition = Vector3.new(x, positionTracker,0)
         newPlatform:PivotTo(CFrame.new(lane.PlayerSpawn.Position + platformPosition) )
     end

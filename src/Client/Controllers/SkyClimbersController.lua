@@ -61,7 +61,7 @@ function SkyClimbersController:KnitStart()
 end
 function SkyClimbersController:JoinedGame(laneLength, lane, platformPoints)
    
-    
+    player.Character.HumanoidRootPart.Anchored = true
     self.CanJump = false
     self.CurrentPlatform = 0
     --add ui
@@ -82,6 +82,8 @@ function SkyClimbersController:JoinedGame(laneLength, lane, platformPoints)
      self.LaneLength = laneLength
 
      self.Lane = workspace.SkyClimbers.Lanes:FindFirstChild("Lane"..lane)
+
+     self:TurnOnAdjacentBillboards()
 
      self.PlatformPoints = platformPoints
 
@@ -115,6 +117,7 @@ function SkyClimbersController:StartGame(players)
     self.Humanoid = player.Character.Humanoid
     self.CanJump = true
     self.GameOver = false
+    self:TurnOnAdjacentBillboards()
 
 
 end
@@ -187,9 +190,39 @@ tween:Play()
 tween.Completed:Connect(function()
     self.CanJump = true
     self.FallAnimationTrack:Stop()
+    player.Character:PivotTo(goalCFrame)
+    self:TurnOnAdjacentBillboards()
 end)
 --rootPart.Anchored = false
 
+
+end
+function SkyClimbersController:TurnOnAdjacentBillboards()
+    local currentPlat = self.Lane.Platforms:FindFirstChild("Platform" .. self.CurrentPlatform)
+    if currentPlat then
+        local currentBB:BillboardGui = currentPlat:FindFirstChild("DirectionBB")
+        if currentBB then
+            currentBB.Enabled = false
+        end
+    end
+  
+    local nextPlat = self.Lane.Platforms:FindFirstChild("Platform" .. self.CurrentPlatform+1)
+    if nextPlat then
+        local nextBB:BillboardGui = nextPlat:FindFirstChild("DirectionBB")
+        if nextBB then
+            nextBB.Enabled = true
+        end
+    end
+    local nextNextPlat = self.Lane.Platforms:FindFirstChild("Platform" .. self.CurrentPlatform+2)
+    if nextNextPlat then
+        local nextNextBB:BillboardGui = nextNextPlat:FindFirstChild("DirectionBB")
+        if nextNextBB then
+            nextNextBB.Enabled = true
+        end
+    end
+   
+   
+   
 
 end
 function SkyClimbersController:SinkInput(actionName, inputState)
