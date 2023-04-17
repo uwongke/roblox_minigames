@@ -105,7 +105,7 @@ function  module:JoinGame(player)
         hitbox.Parent = player.Character
 
         hitbox.Touched:Connect(function(other)
-            if not self.GameStarted then
+            if not self.GameStarted or player ~= self.CurrentHotPotato then
                 return
             end
             local character = other.Parent
