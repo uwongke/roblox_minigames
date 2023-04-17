@@ -1,7 +1,7 @@
 local module = {}
 module.__index = module
 
-local Players = nil
+local Players = {}
 local PlayerCollisionGroupId = "Player"
 
 function  module.GetPlayers()
@@ -45,9 +45,7 @@ function module.new(Player)
     end)
     data.Alive = false
     setmetatable(data, module)
-    if Players == nil then
-        Players = {}
-    end
+
     Players[Player] = data
     return data
 end
