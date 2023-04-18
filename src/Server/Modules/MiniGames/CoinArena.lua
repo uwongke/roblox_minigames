@@ -96,42 +96,7 @@ function module:PrepGame()
         end)
     end)
     SpawnPlayerCoins.OnServerEvent:Connect(function(sender, position)
-        --drop 30% of coins
-        local droppedCoinAmount = math.floor( self.Players[sender].Coins*.3)
-        self.Players[sender].Coins -= droppedCoinAmount
-        self:UpdateCoinDisplay(sender,self.Players[sender].Coins)
-
-        for i = 1, droppedCoinAmount, 1 do
-            local newCoin:BasePart = CoinModel:Clone()
-            newCoin.Parent = workspace.CoinArena.Coins
-            
-            local angle = i * 2 * math.pi / droppedCoinAmount
-            local positionOnCircle = Vector3.new(math.sin(angle), 0, math.cos(angle))
-
-            local coinPos = (positionOnCircle * 6 ) + position
-
-            newCoin.Position = coinPos
-            newCoin.Anchored = false
-            newCoin.CanCollide = true
-            CollectionService:RemoveTag(newCoin, "RotateContinuous")
-            --newCoin:SetNetworkOwner(sender)
-            newCoin:ApplyImpulseAtPosition(Vector3.new(90,-90,90), position)
-            newCoin.Touched:Connect(function(hit)
-                self:TouchedCoin(newCoin, hit)
-            end)
-
-            --could probably move these tween client side
-            --[[
-            local tween = TweenService:Create(newCoin,TweenInfo.new(coinDecayTime), {Transparency = 1})
-            tween.Completed:Connect(function()
-                if newCoin then
-                    newCoin:Destroy()
-                end
-            end)
-            tween:Play()
-            ]]--
-
-        end
+        self:SpawnPhysicsCoins(sender, position)
     end)
   --spawn coins task
   self:SetupCoinSpawns()
@@ -236,7 +201,45 @@ function module:PrepGame()
     
 
 end
+function module:SpawnPhysicsCoins(player, position)
+    --drop 30% of coins
+    local droppedCoinAmount = math.floor( self.Players[player].Coins*.3)
+   
+    self.Players[player].Coins -= droppedCoinAmount
+    self:UpdateCoinDisplay(player,self.Players[player].Coins)
 
+    for i = 1, droppedCoinAmount, 1 do
+        local newCoin:BasePart = CoinModel:Clone()
+        newCoin.Parent = workspace.CoinArena.Coins
+        
+        local angle = i * 2 * math.pi / droppedCoinAmount
+        local positionOnCircle = Vector3.new(math.sin(angle), 0, math.cos(angle))
+
+        local coinPos = (positionOnCircle * 6 ) + position
+
+        newCoin.Position = coinPos
+        newCoin.Anchored = false
+        newCoin.CanCollide = true
+        CollectionService:RemoveTag(newCoin, "RotateContinuous")
+        --newCoin:SetNetworkOwner(sender)
+        newCoin:ApplyImpulseAtPosition(Vector3.new(90,-90,90), position)
+        newCoin.Touched:Connect(function(hit)
+            self:TouchedCoin(newCoin, hit)
+        end)
+
+        --could probably move these tween client side
+        --[[
+        local tween = TweenService:Create(newCoin,TweenInfo.new(coinDecayTime), {Transparency = 1})
+        tween.Completed:Connect(function()
+            if newCoin then
+                newCoin:Destroy()
+            end
+        end)
+        tween:Play()
+        ]]--
+
+    end
+end
 function module:TouchedHazard(character, otherPartRoot)
     --print(otherCharacter)
     if self.GameOver.Value == true then return end
@@ -303,7 +306,8 @@ function module:UpdateCoinDisplay(player, coins)
     if self.CrownBB.Parent ~= winner.Character.Head then
         self.CrownBB.Parent = winner.Character.Head
     end
-    
+    Knit.GetService("CoinArenaService").Client.UpdateCoinAmount:Fire(player, coins)
+
 end
 function module:TouchedCoin(coin, hit)
     if self.GameOver.Value == false then
@@ -401,6 +405,52 @@ function  module:SetupHazards()
 		end
 	end
 
+    -- set up the kill part at the bottom of water
+    local killPart = self.Game:FindFirstChild("KillPart")
+    if not killPart then return end
+    killPart.Touched:Connect(function(hit)
+        local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
+        if player then
+            --teleport player to random spawn
+            local spawns = self.Game.PlayerSpawns:GetChildren()
+            local randomSpawn = spawns[math.random(1,#spawns)]
+            player.Character:PivotTo(CFrame.new(randomSpawn.Position))
+            player.Character.HumanoidRootPart.Anchored = true
+            --make them lose coins now
+            task.spawn(function()
+                local newShield = HitProtection:Clone()
+                newShield.Parent = player.Character
+                local weld = Instance.new("Weld")
+                weld.Part0 = newShield
+                weld.Part1 = player.Character.HumanoidRootPart
+                weld.Parent = newShield
+                local sound = newShield:FindFirstChild("HitSound")
+                if sound then
+                    sound:Play()
+                end
+                local canCollect = player.Character:FindFirstChild("CoinArena_CanCollect")
+                if canCollect then
+                    canCollect.Value = false
+                end
+                task.spawn(function()
+                    task.wait(.5)
+                    if canCollect then
+                        canCollect.Value = true
+                    end
+                    player.Character.HumanoidRootPart.Anchored = false
+                end)
+                local canHit = player.Character:FindFirstChild("CoinArena_CanHit")
+                task.spawn(function()
+                    task.wait(invulTime)
+                    canHit.Value = true
+                    newShield:Destroy()
+                end)
+                task.wait(.2)
+                self:SpawnPhysicsCoins(player, player.Character.HumanoidRootPart.Position)
+            end)
+            
+        end
+    end)
 end
 function  module:JoinGame(player)
     if self.CanJoin.Value then

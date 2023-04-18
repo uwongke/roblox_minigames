@@ -130,6 +130,9 @@ function CoinArenaController:KnitStart()
             end
         end
     end)
+    self.CoinArenaService.UpdateCoinAmount:Connect(function(newCoinAmount)
+        self.UI.Frame.TextLabel.Text = "x" .. newCoinAmount
+     end)
     self.CoinArenaService.StartGame:Connect(function()
         game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
    end)
