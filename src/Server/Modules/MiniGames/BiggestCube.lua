@@ -16,6 +16,7 @@ local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 local GameTemplate = ReplicatedStorage.Assets.MiniGames.BiggestCube
 local GameExtras = ReplicatedStorage.Assets.MiniGameExtras.BiggestCube
 local CubeCharacter: Model = GameExtras.CubeCharacter
+local Food = GameExtras:WaitForChild("Food")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
@@ -42,6 +43,10 @@ end
 
 function BiggestCube:SetScore(player: Player, increment: number)
 	self.Players[player].Score += increment
+
+	if self.Players[player].Score < 0 then
+		self.Players[player].Score = 0
+	end
 
 	pcall(function()
 		player.Character.Head.BillboardGui.TextLabel.Text = tostring(self.Players[player].Score)
@@ -101,13 +106,6 @@ function BiggestCube:PrepGame()
 	local foodPosition: CFrame = foodSpawnZone:GetPivot()
 	local foodAreaSize: Vector3 = foodSpawnZone.Size
 
-	local foodObject = Instance.new("Part")
-	foodObject.Name = "Food"
-	self.Janitor:Add(foodObject)
-	foodObject.BrickColor = BrickColor.new("New Yeller")
-	foodObject.Size = Vector3.new(0.5, 0.5, 0.5)
-	foodObject.Anchored = false
-
 	local lastFeed = os.clock()
 	local endTime = os.time() + GAME_DURATION
 	local heartbeatConn: RBXScriptConnection
@@ -122,9 +120,19 @@ function BiggestCube:PrepGame()
 		-- generate new food.
 		if os.clock() - lastFeed > 0.1 then
 			lastFeed = os.clock()
+			local val = math.random(1,10)
+			local foodName = "GoodFood"
+			if val == 1 then
+				foodName = "BadFood"
+			else
+				if val == 10 then
+					foodName = "GreatFood"
+				end
+			end
+			local foodObject = Food:FindFirstChild(foodName)
 			local newFood = foodObject:Clone()
 			self.Janitor:Add(newFood)
-			newFood.Parent = workspace
+			newFood.Parent = self.Game
 			newFood:PivotTo(
 				foodPosition
 					+ Vector3.new(
@@ -157,10 +165,11 @@ function BiggestCube:JoinGame(player)
 		-- set cube characters
 		self.Janitor:Add(player.CharacterAdded:Connect(function(character)
 			character.PrimaryPart.Touched:Connect(function(otherPart)
-				if otherPart:IsA("BasePart") and otherPart.Name == "Food" then
-					self:SetScore(player, 1)
+				local value = otherPart:FindFirstChild("Value")
+				if value then
+					self:SetScore(player, value.Value)
 					otherPart:Destroy()
-					character.PrimaryPart.Size += Vector3.new(0.1, 0.1, 0.1)
+					character.PrimaryPart.Size = Vector3.one + Vector3.new(0.1, 0.1, 0.1) * self.Players[player].Score
 				end
 			end)
 

@@ -9,7 +9,7 @@ function module.SpawnAroundPart(spawnPoint, spawnObject)
 	if spawnObject:IsA("Model") then
 		spawnObject:SetPrimaryPartCFrame(CFrame.new(position + offset))
 	else
-		spawnObject.Position = position + offset
+		spawnObject.CFrame = CFrame.new(position + offset)
 	end
 end
 
