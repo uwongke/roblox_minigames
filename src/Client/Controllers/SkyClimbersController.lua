@@ -6,7 +6,8 @@ local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
 
 local knit = require(ReplicatedStorage.Packages.Knit)
-local UI = ReplicatedStorage.Assets.UI.MiniGames.SkyClimbers.SkyClimbersUI
+local UI = ReplicatedStorage.Assets.UI.MiniGames.SkyClimbers.Leaderboard
+local PlayerLeaderboard = ReplicatedStorage.Assets.UI.MiniGames.SkyClimbers.PlayerLeaderboard
 local Extras = ReplicatedStorage.Assets.MiniGameExtras.SkyClimbers
 local BezierTween = require(Extras.BezierTweens)
 local Waypoints = BezierTween.Waypoints
@@ -61,7 +62,7 @@ function SkyClimbersController:KnitStart()
 end
 function SkyClimbersController:JoinedGame(laneLength, lane, platformPoints)
    
-    
+    player.Character.HumanoidRootPart.Anchored = true
     self.CanJump = false
     self.CurrentPlatform = 0
     --add ui
@@ -81,17 +82,16 @@ function SkyClimbersController:JoinedGame(laneLength, lane, platformPoints)
 
      self.LaneLength = laneLength
 
-     self.Lane = workspace.SkyClimbers.Lanes:FindFirstChild("Lane"..lane)
+     self.Lane = workspace.SkyClimbers.Lanes:FindFirstChild("Lane_".. player.Name)
+
+     self:TurnOnAdjacentBillboards()
 
      self.PlatformPoints = platformPoints
 
     self:DisableMovement()
 
     -- track height
-    self.HeightTracker = player.Character.HumanoidRootPart:GetPropertyChangedSignal("Position"):Connect(function()
-        local distance = math.floor(player.Character.HumanoidRootPart.Position.Y - self.Lane.PlayerSpawn.Position.Y)
-        self.UI.Frame.TextLabel.Text = distance .. "m"
-    end)
+   self.HeightTrackers = {}
         
     
    
@@ -100,21 +100,42 @@ function SkyClimbersController:JoinedGame(laneLength, lane, platformPoints)
 end
 function SkyClimbersController:StartGame(players)
     self.ActivePlayers = players
-    --[[
+    player = game:GetService("Players").LocalPlayer
+
     for _, opponent in ipairs(players) do
-        if opponent.Name ~= player.Name then
-            local newOpponentGui = OpponentGuiImage:Clone()
+        --if opponent.Name ~= player.Name then
+            local newOpponentGui = PlayerLeaderboard:Clone()
             newOpponentGui.Name = opponent.Name
-            newOpponentGui.Parent = self.UI.RaceTrackerFrame.Frame
-        end
+            if opponent.Name == player.Name then
+                newOpponentGui.Text = "YOU: 0m"
+                newOpponentGui.TextColor3 = Color3.new(0.011764, 0.486274, 0.094117)
+            else
+                newOpponentGui.Text = opponent.Name .. ": 0m"
+            end
+           
+            newOpponentGui.Parent = self.UI.Frame
+
+           local playerHeightTracker = opponent.Character.HumanoidRootPart:GetPropertyChangedSignal("Position"):Connect(function()
+                local playerLane = workspace.SkyClimbers.Lanes:FindFirstChild("Lane_"..opponent.Name)
+                if playerLane then
+                    local distance = math.floor(opponent.Character.HumanoidRootPart.Position.Y - playerLane.PlayerSpawn.Position.Y)
+                    local playerUi = self.UI.Frame:FindFirstChild(opponent.Name)
+                    if playerUi then
+                        playerUi.Text = opponent.Name .. ":" .. distance .. "m"
+                    end
+                    
+                end
+            end)
+            table.insert(self.HeightTrackers, playerHeightTracker)
+       -- end
        
     end
-    ]]--
 
-    player = game:GetService("Players").LocalPlayer
+   
     self.Humanoid = player.Character.Humanoid
     self.CanJump = true
     self.GameOver = false
+    self:TurnOnAdjacentBillboards()
 
 
 end
@@ -131,6 +152,7 @@ function SkyClimbersController:Fall(side)
         
         tween:Play()
         tween.Completed:Connect(function()
+            SentHeightEvent:FireServer(player.Character.HumanoidRootPart.Position)
             self.CanJump = true
         end)
         return
@@ -182,14 +204,46 @@ local goal = {CFrame = goalCFrame}
 local tweeninfo =TweenInfo.new(tweenTime)
 
 local tween = TweenService:Create(rootPart, tweeninfo, goal)
-
+--player.Character:PivotTo(goalCFrame)
 tween:Play()
 tween.Completed:Connect(function()
+    player.Character:PivotTo(goalCFrame)
     self.CanJump = true
     self.FallAnimationTrack:Stop()
+    --player.Character:PivotTo(goalCFrame)
+    SentHeightEvent:FireServer(player.Character.HumanoidRootPart.Position)
+    self:TurnOnAdjacentBillboards()
 end)
 --rootPart.Anchored = false
 
+
+end
+function SkyClimbersController:TurnOnAdjacentBillboards()
+    local currentPlat = self.Lane.Platforms:FindFirstChild("Platform" .. self.CurrentPlatform)
+    if currentPlat then
+        local currentBB:BillboardGui = currentPlat:FindFirstChild("DirectionBB")
+        if currentBB then
+            currentBB.Enabled = false
+        end
+    end
+  
+    local nextPlat = self.Lane.Platforms:FindFirstChild("Platform" .. self.CurrentPlatform+1)
+    if nextPlat then
+        local nextBB:BillboardGui = nextPlat:FindFirstChild("DirectionBB")
+        if nextBB then
+            nextBB.Enabled = true
+        end
+    end
+    local nextNextPlat = self.Lane.Platforms:FindFirstChild("Platform" .. self.CurrentPlatform+2)
+    if nextNextPlat then
+        local nextNextBB:BillboardGui = nextNextPlat:FindFirstChild("DirectionBB")
+        if nextNextBB then
+            nextNextBB.Enabled = true
+        end
+    end
+   
+   
+   
 
 end
 function SkyClimbersController:SinkInput(actionName, inputState)
@@ -267,8 +321,9 @@ end
 function SkyClimbersController:EndGame()
 
     --stop updates
-    self.HeightTracker:Disconnect()
-
+    for _, thread in ipairs(self.HeightTrackers) do
+        thread:Disconnect()
+    end
     --reset camera
     local camera = workspace.CurrentCamera
     camera.CameraType = Enum.CameraType.Custom
