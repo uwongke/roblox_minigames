@@ -11,6 +11,7 @@ local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GameTemplate = ReplicatedStorage.Assets.MiniGames.HoleInTheWall
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
+local Obstacles = ReplicatedStorage.Assets.MiniGameExtras.HoleInTheWall:GetChildren()
 local duration = 60
 
 function module.new(SpawnLocation)
@@ -79,6 +80,10 @@ function module:PrepGame()
 
         local checkPoints = self.Game:WaitForChild("CheckPoints")
         for _,checkPoint in pairs(checkPoints:GetChildren()) do
+            local obstacleIndex = math.random(1,#Obstacles)
+            local obstacle = Obstacles[obstacleIndex]:Clone()
+            obstacle:SetPrimaryPartCFrame(checkPoint.CFrame)
+            obstacle.Parent = self.Game
             checkPoint.Touched:Connect(function(other)
                 local player = Players:GetPlayerFromCharacter(other.Parent)
                 if player then
