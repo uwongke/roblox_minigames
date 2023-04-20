@@ -55,6 +55,7 @@ function module.GetPlayer(Player)
 end
 
 function module.RemovePlayer(Player)
+    if not Player then return end
     Players[Player] = nil
 end
 

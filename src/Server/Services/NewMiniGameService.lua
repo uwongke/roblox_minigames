@@ -21,14 +21,22 @@ local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local TableUtil = require(Packages.TableUtil)
 local Janitor = require(Packages.Janitor)
+local Signal = require(Packages.Signal)
 
 local RANDOM = Random.new(os.time())
 local GameSpawn = workspace.GameSpawn
 local Lobby = workspace.SpawnLocation
 
 local MiniGameService = Knit.CreateService {
-    Name = "NewMiniGameService";
-    Client = {};
+    Name = "MiniGameService";
+    Client = {
+        PlayerJoinedMiniGame = Knit.CreateSignal(),
+        PlayerGotEliminated = Knit.CreateSignal(),
+        MessageUpdate = Knit.CreateSignal(),
+        MiniGameUpdate = Knit.CreateSignal(),
+
+        GameStateChanged = Knit.CreateSignal()
+    };
 }
 
 local TIMES = {
@@ -54,15 +62,15 @@ end
 
 --- Moves players to a new location
 function MiniGameService:MovePlayersTo(location)
-    local pos = Lobby.CFrame
+    local pos = Lobby
     if location == "Arena" then
-        pos = GameSpawn.CFrame
+        pos = GameSpawn
     end
     
     for _, player in game.Players:GetPlayers() do
         local Character = player.Character
         if not Character then continue end
-        Character:PivotTo(Utils.getRandomInPart(pos + CFrame.new(0, 3, 0)))
+        Character:PivotTo(Utils.getRandomInPart(pos) * CFrame.new(0, 4, 0))
     end
 end
 
@@ -83,10 +91,12 @@ function MiniGameService:KnitStart()
 
                 -- move players depending on round
                 if to == "roundInit" then
-                    self:MovePlayersTo("Arena")
+                    -- self:MovePlayersTo("Arena")
                 elseif to == "intermission" then
                     self:MovePlayersTo("Lobby")
                 end
+
+                print("Minigame FSM: " .. event .."!")
             end,
 
             -- this is a state callback instead of event callback because reset goes here
@@ -105,19 +115,22 @@ function MiniGameService:KnitStart()
 
                 -- select next minigame preemptively
                 local minigameNames = TableUtil.Keys(LoadedGames)
-                local nextModule = LoadedGames[minigameNames[RANDOM:NextInteger(1, #minigameNames)]]
+                local name = minigameNames[RANDOM:NextInteger(1, #minigameNames)]
+                local nextModule = LoadedGames[name]
                 self._minigame = nextModule
+                print("Minigame selected: " .. name .."!")
             end,
 
             on_initRound = function(this, event, from, to, ...)
                 local newJanitor = Janitor.new()
-                self._minigame:Init(newJanitor)
+                self._minigame:Init(newJanitor, GameSpawn)
                 self._janitor = newJanitor
 
                 -- make players join the game
                 PlayerManager.ActivatePlayers()
-                for _, player in  PlayerManager.GetListOfActivePlayers() do
-                    
+                print(PlayerManager.GetListOfActivePlayers())
+                for player, data in PlayerManager.GetListOfActivePlayers() do
+                    self._minigame:JoinGame(player)
                 end
             end,
 
@@ -130,7 +143,9 @@ function MiniGameService:KnitStart()
     })
 
     RunService.Heartbeat:Connect(function(dt)
-        if not self.active then return end
+        if #game.Players:GetPlayers() < 1 then
+            return
+        end
         self._timer += dt
 
         local currentState = self.FSM.current
@@ -151,16 +166,12 @@ function MiniGameService:KnitStart()
         end
     end)
 
-    -- start the game loop once players exist
-    repeat
-        task.wait()
-    until #PlayerManager.GetPlayers() >= 1
     self.active = true
 end
 
 function MiniGameService:KnitInit()
     self.active = false
-
+    self.GameStateChanged = Signal.new()
     for _,game in MiniGames:GetChildren() do
         local success, loadedGame = pcall(function()
             return require(game)
@@ -172,14 +183,30 @@ function MiniGameService:KnitInit()
         end
     end
 
+    local initPlayers = {}
     local function onPlayerAdded(player)
         if not player.Character then
             player.CharacterAdded:Wait()
         end
         PlayerManager.new(player)
+        table.insert(initPlayers, player)
+        print("added new player")
+    end
+
+    local function onPlayerRemoving(player)
+        local p = table.find(initPlayers, player)
+        if p then
+            table.remove(initPlayers, p)
+        end
+        PlayerManager.RemovePlayer(player)
     end
 
     Players.PlayerAdded:Connect(onPlayerAdded)
+    for _, player in Players:GetPlayers() do
+        onPlayerAdded(player)
+    end
+
+    Players.PlayerRemoving:Connect(onPlayerRemoving)
 end
 
 

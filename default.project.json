@@ -1,5 +1,5 @@
 {
-    "name": "Boilerplate Project",
+    "name": "New Minigame Engine",
     "globIgnorePaths": [
         "src/**/*.spec.lua",
         "Packages/**/*.spec.lua"

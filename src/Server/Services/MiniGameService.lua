@@ -17,7 +17,7 @@ local GameSpawn = workspace.GameSpawn
 local Games = MiniGames:GetChildren()
 
 local Module = Knit.CreateService {
-    Name = script.Name;
+    Name = "OldMiniGameService";
     Client = {
         PlayerJoinedMiniGame = Knit.CreateSignal(),
         PlayerGotEliminated = Knit.CreateSignal(),

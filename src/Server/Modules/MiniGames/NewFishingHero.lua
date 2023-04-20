@@ -16,6 +16,8 @@ local TableUtil = require(ReplicatedStorage.Packages.TableUtil)
 local Modules = script.Parent.Parent
 local MiniGameUtils = require(Modules.MiniGameUtils)
 
+local Utils = require(game.ReplicatedStorage.Shared.Utils)
+
 local GameTemplate = ReplicatedStorage.Assets.MiniGames:WaitForChild(script.Name)
 local Extras = ReplicatedStorage.Assets.MiniGameExtras[script.Name]
 -- // establish comms
@@ -26,6 +28,14 @@ local TAU = math.pi * 2
 local RANDOM = Random.new(os.time())
 
 local module = {}
+
+local ROUND_TIME = 10
+local FISH_CHANCE = 1
+local FISHDEX = {
+    "Red Fish",
+    "Blue Fish",
+    "Gold Fish",
+}
 
 function module:Init(janitor, SpawnLocation)
     self.MiniGame = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
@@ -43,8 +53,15 @@ function module:Init(janitor, SpawnLocation)
 end
 
 function module:Start()
+    -- move players
+    for player, score in self.MiniGame.Players do
+        local Character = player.Character
+        if not Character then continue end
+        Character:PivotTo(Utils.getRandomInPart(self.MiniGame.Game.Spawn) * CFrame.new(0, 3, 0))
+    end
+
     local offsets = {}
-    for _, rod in self.Game.Rods:GetChildren() do
+    for _, rod in self.MiniGame.Game.Rods:GetChildren() do
         local pole = rod:WaitForChild("FishingRod")
         local pivot = pole:FindFirstChild("Anchor").WorldCFrame
 
@@ -105,7 +122,7 @@ function module:Start()
         end)
     end
     
-    return 60
+    return ROUND_TIME
 end
 
 function module:Update(players, dt, timeElapsed)
@@ -113,7 +130,7 @@ function module:Update(players, dt, timeElapsed)
     -- // create fishing loop
     local _timeElapsed = 0
     self._janitor:Add(RunService.PostSimulation:Connect(function(dt)
-        for _, rod in self.Game.Rods:GetChildren() do
+        for _, rod in self.MiniGame.Game.Rods:GetChildren() do
             local bobber = rod:WaitForChild("Bobber")
             if not rod:GetAttribute("HasFish") and _timeElapsed >= 1 and not rod:GetAttribute("OnCooldown") then
                 if RANDOM:NextInteger(0, 99) < FISH_CHANCE then
