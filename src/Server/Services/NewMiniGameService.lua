@@ -74,6 +74,10 @@ function MiniGameService:MovePlayersTo(location)
     end
 end
 
+function MiniGameService.Client:GetMiniGame()
+    return self._minigameName
+end
+
 function MiniGameService:KnitStart()
     self.FSM = FSM.create({
         initial = "intermission",
@@ -87,7 +91,7 @@ function MiniGameService:KnitStart()
             on_event = function(this, event, from, to, ...)
                 self._timer = 0
                 self.GameStateChanged:Fire(event, from, to, ...)
-                self.Client.GameStateChanged:FireAll(from, to)
+                self.Client.GameStateChanged:FireAll(event, from, to)
 
                 -- move players depending on round
                 if to == "roundInit" then
@@ -118,6 +122,7 @@ function MiniGameService:KnitStart()
                 local name = minigameNames[RANDOM:NextInteger(1, #minigameNames)]
                 local nextModule = LoadedGames[name]
                 self._minigame = nextModule
+                self._minigameName = name
                 print("Minigame selected: " .. name .."!")
             end,
 
@@ -153,7 +158,7 @@ function MiniGameService:KnitStart()
         local event = TRANSITIONS[currentState]
 
         if self._timer >= stateTimer then
-            self.FSM[event]()
+            self.FSM[event](self._minigameName)
             return -- return here so we don't run any extra update code
         end
 
