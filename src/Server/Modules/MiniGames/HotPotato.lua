@@ -3,6 +3,7 @@ module.__index = module
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 local GameTemplate = ReplicatedStorage.Assets.MiniGames.HotPotato
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 local Extras = ReplicatedStorage.Assets.MiniGameExtras.HotPotato
@@ -23,6 +24,19 @@ function module:PrepGame()
         Message="",
         Timer=""
     }
+
+    for _, object in pairs(CollectionService:GetTagged("JumpPad")) do
+        if object:IsA("BasePart") then
+            object.Touched:Connect(function(other)
+                local humanoid = other.Parent:FindFirstChild("Humanoid")
+                humanoid.UseJumpPower = true
+                humanoid.JumpPower = 100 --The Default JumpPower for a Humanoid is 50
+                humanoid.Jump = true
+                task.wait(1)
+                humanoid.JumpPower = 50
+            end)
+        end
+    end
 
     self.Players = {}
     
@@ -130,6 +144,8 @@ function  module:JoinGame(player)
                     local startTime = self.Players[player].StartTime
                     self.Players[player].Total += now - startTime
                     self.LastHotPotato = player
+                    local humanoid:Humanoid = player.Character:FindFirstChild("Humanoid")
+                    humanoid.WalkSpeed /=2
                     self.CurrentHotPotato = otherPlayer
                     self.Players[otherPlayer].StartTime = now
                     self:AttachPotatoToPlayer(otherPlayer)
@@ -168,6 +184,8 @@ function module:AttachPotatoToPlayer(player)
     local character = player.Character
     local hatAttach = character:FindFirstChild("HatAttachment", true)
     if hatAttach then
+        local humanoid:Humanoid = player.Character:FindFirstChild("Humanoid")
+        humanoid.WalkSpeed *=2
         local constraint = self.HotPotato:WaitForChild("RigidConstraint")
         constraint.Enabled = false
         self.HotPotato.Parent = character
