@@ -11,10 +11,12 @@ local UIModules = Modules.UI
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Utils = require(Shared.Utils)
 
 local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
+local Timer = require(Packages.Timer)
 
 local NewMiniGameController = Knit.CreateController { Name = "MiniGameController" }
 local MiniGameService
@@ -25,7 +27,21 @@ local UIViews = {
 
 function NewMiniGameController:KnitStart()
     -- listen for state changes for logic code, can also hold UI code
-    MiniGameService.GameStateChanged:Connect(function(event, from, to, _minigameName)
+    local timer = ReplicatedStorage.Assets.UI.Timer:Clone()
+    timer.Parent = LocalPlayer.PlayerGui
+    local t = 0
+    MiniGameService.GameStateChanged:Connect(function(event, from, to, _minigameName, _time)
+
+        if self._timer then
+            self._timer:Disconnect()
+        end
+
+        t = _time
+        self._timer = Timer.Simple(1, function()
+            t -= 1
+            timer:WaitForChild("Display").Text = Utils.SecondsToClock(t)
+        end)
+
         if event == "initRound" then
             if not _minigameName then 
                 warn("No minigame name found! This is an error")
