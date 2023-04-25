@@ -91,7 +91,7 @@ function MiniGameService:KnitStart()
             on_event = function(this, event, from, to, ...)
                 self._timer = 0
                 self.GameStateChanged:Fire(event, from, to, ...)
-                self.Client.GameStateChanged:FireAll(event, from, to, self._minigameName)
+                self.Client.GameStateChanged:FireAll(event, from, to, self._minigameName, TIMES[to])
 
                 -- move players depending on round
                 if to == "roundInit" then
