@@ -21,6 +21,7 @@ function module:Start(janitor)
     local FishComm = ClientComm.new(game:GetService("ReplicatedStorage"), true, "FishComm")
     local CaughtFishEvent = FishComm:GetSignal("CaughtFishEvent")
 
+    -- create score display
     local GUI = Template:Clone()
     GUI.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
     janitor:Add(CaughtFishEvent:Connect(function(value)

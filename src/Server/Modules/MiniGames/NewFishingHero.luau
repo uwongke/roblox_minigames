@@ -37,6 +37,7 @@ local FISHDEX = {
     "Gold Fish",
 }
 
+--- Called when the round is initialized, 10s preview with game info is displayed on the client
 function module:Init(janitor, SpawnLocation)
     self.MiniGame = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
     janitor:Add(self.MiniGame.Game)
@@ -52,6 +53,7 @@ function module:Init(janitor, SpawnLocation)
     self._janitor = janitor
 end
 
+--- Called when the round starts, timer is started as well. 
 function module:Start()
     -- move players
     for player, score in self.MiniGame.Players do
@@ -89,7 +91,6 @@ function module:Start()
             local fish = rod:GetAttribute("HasFish")
             if fish then
                 rod:SetAttribute("Caught", rod:GetAttribute("Caught") + 1)
-                -- // TODO: add points
                 self.MiniGame.Players[player] = self.MiniGame.Players[player] + fish
                 CaughtFishEvent:Fire(player, self.MiniGame.Players[player])
                 print(player.Name .. " caught a " .. FISHDEX[fish] .. " worth " .. fish .. " points!")
@@ -99,6 +100,7 @@ function module:Start()
             end
         end)
 
+        -- trigger rod cooldown when fish is removed either manually by players or timed out
         rod.AttributeChanged:Connect(function(attributeName)
             if attributeName == "HasFish" then
                 if not rod:GetAttribute("HasFish") then
@@ -122,42 +124,41 @@ function module:Start()
         end)
     end
     
+    self._timeElapsed = 0
+
     return ROUND_TIME
 end
 
+--- Called every frame by the server during gameplay
 function module:Update(players, dt, timeElapsed)
-    -- // start timer
-    -- // create fishing loop
-    local _timeElapsed = 0
-    self._janitor:Add(RunService.PostSimulation:Connect(function(dt)
-        for _, rod in self.MiniGame.Game.Rods:GetChildren() do
-            local bobber = rod:WaitForChild("Bobber")
-            if not rod:GetAttribute("HasFish") and _timeElapsed >= 1 and not rod:GetAttribute("OnCooldown") then
-                if RANDOM:NextInteger(0, 99) < FISH_CHANCE then
-                    -- apply fish
-                    local fishNum = RANDOM:NextInteger(1, #FISHDEX)
-                    rod:SetAttribute("HasFish", fishNum)
-                    rod:SetAttribute("OnCooldown", true)
-                    rod:FindFirstChild("ReelPrompt", true).Enabled = true
+    --// single step update for getting next fish    
+    for _, rod in self.MiniGame.Game.Rods:GetChildren() do
+        local bobber = rod:WaitForChild("Bobber")
+        if not rod:GetAttribute("HasFish") and self._timeElapsed >= 1 and not rod:GetAttribute("OnCooldown") then
+            if RANDOM:NextInteger(0, 99) < FISH_CHANCE then
+                -- apply fish
+                local fishNum = RANDOM:NextInteger(1, #FISHDEX)
+                rod:SetAttribute("HasFish", fishNum)
+                rod:SetAttribute("OnCooldown", true)
+                rod:FindFirstChild("ReelPrompt", true).Enabled = true
 
-                    local fishModel = Extras[FISHDEX[fishNum]]:Clone()
-                    fishModel.CFrame = bobber.Bobber.CFrame
-                    fishModel.Name = "Fish"
-                    local rigid = Instance.new("RigidConstraint")
-                    rigid.Parent = fishModel
-                    rigid.Attachment0 = bobber.Bobber
-                    rigid.Attachment1 = fishModel.Attachment
-                    fishModel.Parent = bobber
+                local fishModel = Extras[FISHDEX[fishNum]]:Clone()
+                fishModel.CFrame = bobber.Bobber.CFrame
+                fishModel.Name = "Fish"
+                local rigid = Instance.new("RigidConstraint")
+                rigid.Parent = fishModel
+                rigid.Attachment0 = bobber.Bobber
+                rigid.Attachment1 = fishModel.Attachment
+                fishModel.Parent = bobber
 
-                    task.delay(6, function()
-                        rod:SetAttribute("HasFish", nil)
-                    end)
-                    _timeElapsed = 0
-                end
+                task.delay(6, function()
+                    rod:SetAttribute("HasFish", nil)
+                end)
+                self._timeElapsed = 0
             end
         end
-        _timeElapsed += dt
-    end))
+    end
+    self._timeElapsed += dt
 end
 
 --- Called when a player joins during intermission
@@ -202,6 +203,7 @@ function module:GetWinners()
     return justPlayers, 3
 end
 
+--- Called when the minigame ends
 function module:Destroy()
     self.MiniGame = nil
 end
