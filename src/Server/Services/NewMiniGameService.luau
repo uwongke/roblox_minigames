@@ -148,25 +148,31 @@ function MiniGameService:KnitStart()
     })
 
     RunService.Heartbeat:Connect(function(dt)
+        if not self.active then return end -- don't do anything if game is explicitly halted
+
+        -- dont do anything if no players
         if #game.Players:GetPlayers() < 1 then
             return
         end
         self._timer += dt
 
-        local currentState = self.FSM.current
-        local stateTimer = TIMES[currentState]
-        local event = TRANSITIONS[currentState]
+        -- get current game state
+        local currentState = self.FSM.current -- current state
+        local stateTimer = TIMES[currentState] -- expected time to spend in this state
+        local event = TRANSITIONS[currentState] -- next event associated with current game state
 
+        -- move to next game state after time elapses
         if self._timer >= stateTimer then
             self.FSM[event](self._minigameName)
             return -- return here so we don't run any extra update code
         end
 
+        -- run heartbeat update here
         if currentState == "roundStarted" then
             if self._minigame then
                 self._minigame:Update(dt, self._timer)
             else
-                self.FSM.reset()
+                self.FSM.reset() -- something went wrong
             end
         end
     end)
