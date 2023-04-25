@@ -32,9 +32,9 @@ local module = {}
 local ROUND_TIME = 60 -- how long the round can last before the engine terminates the game
 local FISH_CHANCE = 1
 local FISHDEX = {
-    "Red Fish",
-    "Blue Fish",
-    "Gold Fish",
+    "Red Fish", -- 1 point
+    "Blue Fish", -- 2 points
+    "Gold Fish", -- 3 points
 }
 
 --- Called when the round is initialized, 10s preview with game info is displayed on the client
@@ -69,9 +69,6 @@ function module:Start()
         local pivot = pole:FindFirstChild("Anchor").WorldCFrame
 
         local offset = pivot:toObjectSpace(pole.CFrame) -- Get the offset from the part to the pivot
-        -- while wait() do
-        -- newpivot = newpivot * CFrame.Angles(0, math.rad(1), 0) -- Rotate the pivot
-        -- part.CFrame = newpivot * offset -- Re-offset the part from the new rotation
         offsets[rod] = offset
         CollectionService:AddTag(rod, "FishingRod")
         
@@ -86,7 +83,8 @@ function module:Start()
         newPrompt.HoldDuration = 1
         newPrompt.Exclusivity = Enum.ProximityPromptExclusivity.OnePerButton
         newPrompt.MaxActivationDistance = 10
-         
+        
+        -- Catch fish method
         newPrompt.Parent = rod:WaitForChild("FishingRod").Anchor
         newPrompt.Triggered:Connect(function(player)
             local fish = rod:GetAttribute("HasFish")
