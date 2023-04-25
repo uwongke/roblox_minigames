@@ -7,6 +7,7 @@
 local LocalPlayer = game.Players.LocalPlayer
 local PlayerScripts = game.Players.LocalPlayer:WaitForChild("PlayerScripts")
 local Modules = PlayerScripts:WaitForChild("Modules")
+local UIModules = Modules.UI
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -15,7 +16,7 @@ local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 local Janitor = require(Packages.Janitor)
 
-local NewMiniGameController = Knit.CreateController { Name = "NewMiniGameController" }
+local NewMiniGameController = Knit.CreateController { Name = "MiniGameController" }
 local MiniGameService
 
 local UIViews = {
@@ -36,11 +37,25 @@ function NewMiniGameController:KnitStart()
                 local newJanitor = Janitor.new()
                 self._janitor = newJanitor
                 self._minigame = require(module)
-                self._minigame:Init()
+                local title, desc, image = self._minigame:Init(newJanitor)
+                local newDisplay = ReplicatedStorage.Assets.UI.GameInfo:Clone()
+                local Main = newDisplay:WaitForChild("Main")
+
+                Main.Title.Text = title
+                Main.Description.Text = desc
+                Main.Image.Image = image
+
+                newDisplay.Parent = LocalPlayer.PlayerGui
+                self._gameInfo = newDisplay
             end
         elseif event == "startRound" then
+            if self._gameInfo then
+                self._gameInfo:Destroy()
+                self._gameInfo = nil
+            end
+            
             if self._minigame then
-                self._minigame:Start()
+                self._minigame:Start(self._janitor)
             end
         elseif event == "endRound" then
             if self._minigame then

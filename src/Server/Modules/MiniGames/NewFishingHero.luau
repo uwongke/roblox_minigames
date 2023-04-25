@@ -29,7 +29,7 @@ local RANDOM = Random.new(os.time())
 
 local module = {}
 
-local ROUND_TIME = 10
+local ROUND_TIME = 60 -- how long the round can last before the engine terminates the game
 local FISH_CHANCE = 1
 local FISHDEX = {
     "Red Fish",

@@ -41,7 +41,7 @@ local MiniGameService = Knit.CreateService {
 
 local TIMES = {
     ["intermission"] = 10,
-    ["roundInit"] = 5,
+    ["roundInit"] = 10,
     ["roundStarted"] = 120
 }
 
@@ -91,7 +91,7 @@ function MiniGameService:KnitStart()
             on_event = function(this, event, from, to, ...)
                 self._timer = 0
                 self.GameStateChanged:Fire(event, from, to, ...)
-                self.Client.GameStateChanged:FireAll(event, from, to)
+                self.Client.GameStateChanged:FireAll(event, from, to, self._minigameName)
 
                 -- move players depending on round
                 if to == "roundInit" then
