@@ -54,6 +54,7 @@ function module:Init(janitor, SpawnLocation)
 end
 
 --- Called when the round starts, timer is started as well. 
+--- Returns how long the round should last, otherwise the engine defaults to 120s
 function module:Start()
     -- move players
     for player, score in self.MiniGame.Players do
