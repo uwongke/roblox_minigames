@@ -78,6 +78,7 @@ function MiniGameService.Client:GetMiniGame()
     return self._minigameName
 end
 
+local FORCE_MINIGAME = nil
 function MiniGameService:KnitStart()
     self.FSM = FSM.create({
         initial = "intermission",
@@ -119,7 +120,7 @@ function MiniGameService:KnitStart()
 
                 -- select next minigame preemptively
                 local minigameNames = TableUtil.Keys(LoadedGames)
-                local name = minigameNames[RANDOM:NextInteger(1, #minigameNames)]
+                local name = FORCE_MINIGAME or minigameNames[RANDOM:NextInteger(1, #minigameNames)]
                 local nextModule = LoadedGames[name]
                 self._minigame = nextModule
                 self._minigameName = name
