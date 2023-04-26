@@ -16,7 +16,7 @@ local Knit = require(Packages.Knit)
 --game vars
 --local coinsPerSpawn = 10 -- +- 5
 local invulTime = 3  --invul time after player is hit
-local duration = 90
+local duration = 60
 local startingCoins = 25
 local normalCoinSpawnTime = 5
 local highValueCoinSpawnTime = 9
@@ -31,7 +31,6 @@ local SpawnPlayerCoins:RemoteEvent = GameExtras.SpawnPlayerCoins
 local HitProtection:Part = GameExtras.HitProtection
 local CoinBillboardUI:BillboardGui = GameExtras.CoinBillboardGui
 local CrownBillboardUI:BillboardGui = GameExtras.CrownBillboardGui
-
 function module.new(SpawnLocation)
     local data = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
     setmetatable(data,module)
@@ -411,6 +410,7 @@ function  module:SetupHazards()
     killPart.Touched:Connect(function(hit)
         local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
         if player then
+            Knit.GetService("CoinArenaService").Client.FellInWater:Fire(player)
             --teleport player to random spawn
             local spawns = self.Game.PlayerSpawns:GetChildren()
             local randomSpawn = spawns[math.random(1,#spawns)]
