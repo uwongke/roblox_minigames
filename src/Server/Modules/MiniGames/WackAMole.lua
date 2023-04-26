@@ -318,7 +318,22 @@ end
 
 function module:Destroy()
     --clean up
+    self:RemoveMalletsForTeam(self.MiniGame.Blue)
+    self:RemoveMalletsForTeam(self.MiniGame.Red)
     self.MiniGame = nil
+end
+
+function module:RemoveMalletsForTeam(team)
+    for _, player in team.Players do
+        local inHand = player.Character:FindFirstChild("Mallet")
+        local inBackPack = player.Backpack:FindFirstChild("Mallet")
+        if inHand then
+            inHand:Destroy()
+        end
+        if inBackPack then
+            inBackPack:Destroy()
+        end
+    end
 end
 
 return module
