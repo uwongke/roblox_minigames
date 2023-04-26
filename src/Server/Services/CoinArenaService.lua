@@ -20,7 +20,8 @@ local CoinArenaService = Knit.CreateService {
         UpdateCoinAmount = Knit.CreateSignal(),
         PrepGame = Knit.CreateSignal(),
         StartGame = Knit.CreateSignal(),
-        EndGame = Knit.CreateSignal()
+        EndGame = Knit.CreateSignal(),
+        FellInWater = Knit.CreateSignal()
         
 };
 }

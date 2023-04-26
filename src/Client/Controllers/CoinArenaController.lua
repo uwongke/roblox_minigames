@@ -7,6 +7,8 @@ local MiniGameExtras = ReplicatedStorage.Assets.MiniGameExtras.CoinArena
 local UI = ReplicatedStorage.Assets.UI.MiniGames.CoinArena.CoinArenaUI
 local CoinSound:Sound = MiniGameExtras.CoinSound
 local CoinBagSound:Sound = MiniGameExtras.CoinBagSound
+local WaterSplashSound:Sound = MiniGameExtras.WaterSplash
+local UiTransition= require(MiniGameExtras.UiTransitions)
 
 local player = Players.LocalPlayer
 local mouse = player:GetMouse()
@@ -32,11 +34,6 @@ local CoinArenaController = knit.CreateController({
 function CoinArenaController:KnitInit()
 	--// services
 	self.CoinArenaService = knit.GetService("CoinArenaService")
-
-   
-
-    
-
 end
 
 function CoinArenaController:OnButton1Down()
@@ -116,6 +113,10 @@ function CoinArenaController:KnitStart()
         end)
 
     end)
+    self.CoinArenaService.FellInWater:Connect(function()
+        WaterSplashSound:Play()
+        UiTransition.Transition("CircleGrow", .2, 0, Color3.new(0.023529411764705882, 0.7254901960784313, 0.9019607843137255), nil)
+    end)
     self.CoinArenaService.GotCoin:Connect(function(newCoinAmount, coinsPickedUp)
        --self.Coins += 1
        --self.CoinArenaService:UpdateCoinDisplay(self.Coins)
@@ -131,6 +132,7 @@ function CoinArenaController:KnitStart()
         end
     end)
     self.CoinArenaService.UpdateCoinAmount:Connect(function(newCoinAmount)
+        if not self.UI.Frame then return end
         self.UI.Frame.TextLabel.Text = "x" .. newCoinAmount
      end)
     self.CoinArenaService.StartGame:Connect(function()
