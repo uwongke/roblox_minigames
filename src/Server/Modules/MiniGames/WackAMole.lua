@@ -262,14 +262,14 @@ function  module:JoinGame(player)
                 end
             end
             --update my personal info
-            self.MessageTarget.Value = player.UserId
+            --self.MessageTarget.Value = player.UserId
             data.Score += value.Value
             -- update team info
             local messageData  = {}
-            self.MessageTarget.Value = ""--everybody
+            --self.MessageTarget.Value = ""--everybody
             self.MiniGame[team].Score += value.Value
             messageData[team.."Score"] = self.MiniGame[team].Score
-            WhackMoleEvent:FireAll(messageData)
+            WhackMoleEvent:FireAll(HttpService:JSONEncode(messageData))
             --self.Message.Value = HttpService:JSONEncode(messageData)
         end
     end)
@@ -296,6 +296,21 @@ function  module:JoinGame(player)
     --end
     --return false
 end
+
+function module:GetWinners()
+    local winners = nil
+
+    if self.MiniGame.Red.Score > self.MiniGame.Blue.Score then
+        winners = self.MiniGame.Red.Players
+    else
+        if self.MiniGame.Blue.Score > self.MiniGame.Red.Score then
+            winners = self.MiniGame.Blue.Players
+        end
+    end
+
+    return winners
+end
+
 
 function module:Update()
     -- no need to update anything in real-time for this game
