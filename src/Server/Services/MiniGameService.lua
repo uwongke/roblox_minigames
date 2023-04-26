@@ -17,7 +17,7 @@ local GameSpawn = workspace.GameSpawn
 local Games = MiniGames:GetChildren()
 
 local Module = Knit.CreateService {
-    Name = script.Name;
+    Name = "OldMiniGameService";
     Client = {
         PlayerJoinedMiniGame = Knit.CreateSignal(),
         PlayerGotEliminated = Knit.CreateSignal(),
@@ -143,6 +143,8 @@ function Module:KnitStart()
 end
 
 function Module:KnitInit()
+    if true then return end -- disables service for the meantime
+
     for _,game in MiniGames:GetChildren() do
         Games[game.Name] = require(game)
     end

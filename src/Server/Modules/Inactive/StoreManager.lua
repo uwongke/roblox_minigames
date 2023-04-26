@@ -125,27 +125,6 @@ function StoreManager:CreateShop(player: Player)
 		end
 	end
 
-	local function clickedButter(playerWhoClicked: Player, cupColor: "Earth Butter" | "Toothpaste Butter" | "Butter")
-		local hasEmpty = if playerWhoClicked and playerWhoClicked.Character
-			then playerWhoClicked.Character:FindFirstChild("Popcorn", true)
-			else nil
-
-		local humanoid: Humanoid = if playerWhoClicked.Character
-			then playerWhoClicked.Character:FindFirstChild("Humanoid")
-			else nil
-
-		local newCup = GameExtras:FindFirstChild("Popcorn" .. cupColor)
-		if hasEmpty and newCup and humanoid then
-			newCup = newCup:Clone()
-			self.Janitor:Add(newCup)
-			hasEmpty:Destroy()
-
-			newCup.Parent = playerWhoClicked.Backpack
-			humanoid:EquipTool(newCup)
-			return newCup
-		end
-	end
-
 	-- create customer and random order
 	local possibleOrders = {
 		"Red Soda",
@@ -186,7 +165,7 @@ function StoreManager:CreateShop(player: Player)
 				self.Janitor:Add(newOrderText)
 				newOrderText.Text = order
 				newOrderText.Visible = true
-				newOrderText.Parent = billboard.Frame
+				newOrderText.Parent = billboard
 
 				-- add to order queue folder
 				local newOrder = Instance.new("NumberValue")
@@ -215,46 +194,14 @@ function StoreManager:CreateShop(player: Player)
 				and cup.Name == "Empty Cup"
 				and (target.Name == "Red" or target.Name == "Blue" or target.Name == "Green")
 			then
-				local newCup = clickedFountain(player, target.Name)
-				newCup.RemoteEvent.OnServerEvent:Connect(function(player: Player, target)
+				local cup = clickedFountain(player, target.Name)
+				cup.RemoteEvent.OnServerEvent:Connect(function(player: Player, target)
 					cupHandler(player, cup, target)
 				end)
 			elseif target.Name == "Trash" then
 				trash(player)
 			elseif target.Name == "Customer" then
 				orderSignal:Fire(customer, cup.Name .. " Soda")
-			end
-		end
-	end
-
-	local function popcornCupHandler(player: Player, cup: Tool, target)
-		if player and target and target:IsA("BasePart") then
-			if
-				cup
-				and cup.Name == "Popcorn"
-				and (target.Name == "Earth Butter" or target.Name == "Toothpaste Butter" or target.Name == "Butter")
-			then
-				local newPopcorn = clickedButter(player, target.Name)
-				cup.RemoteEvent.OnServerEvent:Connect(function(player: Player, target)
-					cupHandler(player, cup, target)
-				end)
-			elseif cup.Name == "Empty Popcorn Cup" and target.Name == "Popcorn Machine" then
-				local newPopcorn = GameExtras.Popcorn:Clone()
-				self.Janitor:Add(newPopcorn)
-
-				newPopcorn.RemoteEvent.OnServerEvent:Connect(function(player: Player, target)
-					cupHandler(player, newPopcorn, target)
-				end)
-
-				newPopcorn.Parent = player.Backpack
-				local humanoid: Humanoid = if player.Character then player.Character:FindFirstChild("Humanoid") else nil
-				if humanoid then
-					humanoid:EquipTool(newPopcorn)
-				end
-			elseif target.Name == "Trash" then
-				trash(player)
-			elseif target.Name == "Customer" then
-				orderSignal:Fire(customer, cup.Name)
 			end
 		end
 	end
@@ -326,38 +273,17 @@ function StoreManager:CreateShop(player: Player)
 		end
 	end)
 
-	-- popcorn giver
-	local emptyCupClickDetector: ClickDetector = storeTemplate["Popcorn Cup"].ClickDetector
-	emptyCupClickDetector.MouseClick:Connect(function(playerWhoClicked: Player)
-		local humanoid: Humanoid = if playerWhoClicked.Character
-			then playerWhoClicked.Character:FindFirstChild("Humanoid")
-			else nil
-		if self.GameOver.Value == false and humanoid then
-			local emptyCup: Tool = GameExtras["Empty Popcorn Cup"]:Clone()
-			self.Janitor:Add(emptyCup)
-
-			emptyCup.RemoteEvent.OnServerEvent:Connect(function(player: Player, target)
-				popcornCupHandler(player, emptyCup, target)
-			end)
-
-			emptyCup.Parent = playerWhoClicked.Backpack
-			humanoid:EquipTool(emptyCup)
-		end
-	end)
-
 	local heartbeatConn: RBXScriptConnection
 	local hasActiveCustomer = false
-	local creatingCustomer = false
 	heartbeatConn = RunService.Heartbeat:Connect(function(deltaTime)
 		if self.GameOver.Value == true then
 			heartbeatConn:Disconnect()
 			return
 		end
 
-		if #activeCustomers < 1 and not creatingCustomer then
-			creatingCustomer = true
+		if not hasActiveCustomer then
+			hasActiveCustomer = true
 			createCustomer()
-			creatingCustomer = false
 		end
 	end)
 

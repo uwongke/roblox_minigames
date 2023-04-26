@@ -8,7 +8,7 @@ local UIViews = {
 }
 
 local Controller = Knit.CreateController({
-    Name = script.Name
+    Name = "OldMiniGameController"
 })
 
 function Controller:DisplayMessage(Message)
