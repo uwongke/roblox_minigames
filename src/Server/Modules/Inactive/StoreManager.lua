@@ -20,6 +20,7 @@ local StoreTemplate = GameExtras.StoreTemplate
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
 local PivotTween = require(ReplicatedStorage.PivotTween)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local GAME_DURATION = 60
 local POINT_PER_CUSTOMER = 1
@@ -57,6 +58,12 @@ function StoreManager:SetMessage(message: string?, timer: number?, yieldTime: nu
 	end
 end
 
+--[[
+
+	TODO : PROJECT SCORE FROM CUSTOMER
+
+]]
+
 function StoreManager:SetScore(player: Player, increment: number)
 	local store = if self.Players[player] then self.Players[player].Store else nil
 	print(store)
@@ -70,6 +77,7 @@ function StoreManager:SetScore(player: Player, increment: number)
 end
 
 function StoreManager:CreateShop(player: Player)
+	local orderSignal = Signal.new()
 	local mapCF = self.Game:GetPivot()
 	local mapSize = self.Game:GetExtentsSize() / 2
 
@@ -94,10 +102,11 @@ function StoreManager:CreateShop(player: Player)
 			mapCF - Vector3.new(0, 0, mapSize.Z) + Vector3.new(-storeSize.X, storeSize.Y / 2, storeSize.Z * zIncrement)
 		)
 	end
+
 	-- soda machine
 	local function clickedFountain(playerWhoClicked: Player, cupColor: "Red" | "Green" | "Blue")
 		local hasEmpty = if playerWhoClicked and playerWhoClicked.Character
-			then playerWhoClicked.Character:FindFirstChild("Empty", true)
+			then playerWhoClicked.Character:FindFirstChild("Empty Cup", true)
 			else nil
 
 		local humanoid: Humanoid = if playerWhoClicked.Character
@@ -116,18 +125,54 @@ function StoreManager:CreateShop(player: Player)
 		end
 	end
 
-	local function processCustomer(customer: BasePart, cup: Tool)
-		local billboard: BillboardGui = if customer and customer:FindFirstChild("BillboardGui", true)
-			then customer.Head.BillboardGui
+	-- create customer and random order
+	local possibleOrders = {
+		"Red Soda",
+		"Blue Soda",
+		"Green Soda",
+		"Empty Cup",
+		"Empty Popcorn Cup",
+		"Popcorn",
+		"Popcorn Earth Butter",
+		"Popcorn Butter",
+		"Popcorn ToothPaste Butter",
+	}
+
+	local customer = GameExtras.Customer
+	local deskCF: CFrame = storeTemplate.Desk:GetPivot() + Vector3.new(0, customer:GetExtentsSize().Y / 2, 0)
+	local startCF: CFrame = deskCF - deskCF.LookVector * 10
+	local activeCustomers = {}
+	local function createCustomer()
+		-- spawn and position
+		local newCustomer = customer:Clone()
+		local orderQueue = newCustomer.Order_Queue
+		self.Janitor:Add(newCustomer)
+		newCustomer.Parent = workspace
+		newCustomer:PivotTo(startCF)
+		PivotTween:TweenPivot(newCustomer, startCF + startCF.LookVector * 7, TweenInfo.new(3), true)
+
+		local billboard: BillboardGui = if newCustomer and newCustomer:FindFirstChild("Head")
+			then newCustomer.Head:FindFirstChild("BillboardGui")
 			else nil
-		if billboard and cup then
-			cup:Destroy()
-			customer.Highlight.Enabled = true
-			customer.Highlight.FillColor = if billboard.TextLabel.Text == cup.Name
-				then Color3.new(0, 1, 0)
-				else Color3.new(1, 0, 0)
-			task.wait(1.5)
-			customer.Success.Value = if billboard.TextLabel.Text == cup.Name then "Success" else "Failure"
+		if billboard then
+			table.insert(activeCustomers, customer)
+
+			-- decide how many orders to give
+			local orders = math.random(1, 3)
+			for i = 1, orders do
+				local order = possibleOrders[math.random(1, #possibleOrders)]
+				local newOrderText = billboard.TextTemplate:Clone()
+				self.Janitor:Add(newOrderText)
+				newOrderText.Text = order
+				newOrderText.Visible = true
+				newOrderText.Parent = billboard
+
+				-- add to order queue folder
+				local newOrder = Instance.new("NumberValue")
+				newOrder.Value = string.len(order) -- how much points they get
+				newOrder.Name = order
+				newOrder.Parent = orderQueue
+			end
 		end
 	end
 
@@ -143,11 +188,10 @@ function StoreManager:CreateShop(player: Player)
 
 	-- cup
 	local function cupHandler(player: Player, cup: Tool, target)
-		print(target)
 		if player and target and target:IsA("BasePart") then
 			if
 				cup
-				and cup.Name == "Empty"
+				and cup.Name == "Empty Cup"
 				and (target.Name == "Red" or target.Name == "Blue" or target.Name == "Green")
 			then
 				local cup = clickedFountain(player, target.Name)
@@ -157,10 +201,58 @@ function StoreManager:CreateShop(player: Player)
 			elseif target.Name == "Trash" then
 				trash(player)
 			elseif target.Name == "Customer" then
-				processCustomer(target.parent, cup)
+				orderSignal:Fire(customer, cup.Name .. " Soda")
 			end
 		end
 	end
+
+	-- handle orders
+	orderSignal:Connect(function(customer, itemReceived: string)
+		local orderQueue = customer and customer:FindFirstChild("Order_Queue")
+		if orderQueue then
+			for customerIndex, order in orderQueue:GetChildren() do
+				if itemReceived == order.Name then
+					-- visual indication
+					customer.Highlight.Enabled = true
+					customer.Highlight.FillColor = Color3.new(0, 1, 0)
+
+					task.delay(1, function()
+						if customer and customer:FindFirstChild("Highlight") then
+							customer.Highlight.Enabled = false
+						end
+					end)
+
+					-- update score
+					self:SetScore(player, order.Value)
+
+					-- remove order and check if they have anymore
+					order:Destroy()
+					if #orderQueue:GetChildren() == 0 then
+						customer:Destroy()
+						table.remove(activeCustomers, customerIndex)
+					end
+				else -- if the order is not in this customer. We will remove 1.
+					customer.Highlight.Enabled = true
+					customer.Highlight.FillColor = Color3.new(1, 0, 0)
+
+					task.delay(1, function()
+						if customer and customer:FindFirstChild("Highlight") then
+							customer.Highlight.Enabled = false
+						end
+					end)
+
+					self:SetScore(player, -1)
+
+					-- remove order and check if they have anymore
+					order:Destroy()
+					if #orderQueue:GetChildren() == 0 then
+						customer:Destroy()
+						table.remove(activeCustomers, customerIndex)
+					end
+				end
+			end
+		end
+	end)
 
 	-- empty cup giver
 	local emptyCupClickDetector: ClickDetector = storeTemplate.Cups.ClickDetector
@@ -181,13 +273,6 @@ function StoreManager:CreateShop(player: Player)
 		end
 	end)
 
-	-- customer
-	local customer = GameExtras.Customer
-
-	local deskCF: CFrame = storeTemplate.Desk:GetPivot() + Vector3.new(0, customer:GetExtentsSize().Y / 2, 0)
-	local startCF: CFrame = deskCF - deskCF.LookVector * 10
-
-	local possibleOrders = { "Red", "Green", "Blue" }
 	local heartbeatConn: RBXScriptConnection
 	local hasActiveCustomer = false
 	heartbeatConn = RunService.Heartbeat:Connect(function(deltaTime)
@@ -198,34 +283,7 @@ function StoreManager:CreateShop(player: Player)
 
 		if not hasActiveCustomer then
 			hasActiveCustomer = true
-
-			-- spawn customer
-			local newCustomer = customer:Clone()
-			self.Janitor:Add(newCustomer)
-			newCustomer.Parent = workspace
-			newCustomer:PivotTo(startCF)
-
-			PivotTween:TweenPivot(newCustomer, startCF + startCF.LookVector * 7, TweenInfo.new(3), true)
-
-			local billboard: BillboardGui = if newCustomer and newCustomer:FindFirstChild("Head")
-				then newCustomer.Head:FindFirstChild("BillboardGui")
-				else nil
-			if billboard then
-				local order = possibleOrders[math.random(1, #possibleOrders)]
-				newCustomer.Head.BillboardGui.TextLabel.Text = order
-				newCustomer.Head.BillboardGui.Enabled = true
-
-				newCustomer.Success.Changed:Connect(function()
-					if newCustomer.Success.Value == "Success" then
-						self:SetScore(player, POINT_PER_CUSTOMER)
-					else
-						self:SetScore(player, -POINT_PER_CUSTOMER)
-					end
-
-					newCustomer:Destroy()
-					hasActiveCustomer = false
-				end)
-			end
+			createCustomer()
 		end
 	end)
 

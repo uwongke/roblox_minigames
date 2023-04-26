@@ -18,7 +18,8 @@ local PixelArtistService = Knit.CreateService {
     Client = {
         RoomReady = Knit.CreateSignal(),
         TargetChosen = Knit.CreateSignal(),
-        RoundOver = Knit.CreateSignal()
+        RoundOver = Knit.CreateSignal(),
+        EndGame = Knit.CreateSignal()
 };
 }
 

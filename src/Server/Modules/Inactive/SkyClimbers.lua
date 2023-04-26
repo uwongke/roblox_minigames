@@ -20,9 +20,10 @@ local Extras = ReplicatedStorage.Assets.MiniGameExtras.SkyClimbers
 local Lane = Extras.Lane
 local Platform = Extras.Platform
 local SentHeightEvent:RemoteEvent = Extras.SentHeightEvent
+local DirectionBB:BillboardGui = Extras.DirectionBB
 --game vars
 local duration = 30
-local laneLength = 2300
+local laneLength = 1200
 local distanceBetweenPlatforms = 10
 local laneBuffer = 80
 local platformPoints = {}
@@ -55,22 +56,24 @@ function module:PrepGame()
     self.Winner = nil
     self.HighestDistance = 0
     SentHeightEvent.OnServerEvent:Connect(function(sender, position)
-        self.GotScoreCount += 1
+        --self.GotScoreCount += 1
         sender.Character:PivotTo(CFrame.new(position))
+        self.Players[sender].Height = position.Y
         local height = position.Y
-        if height > self.HighestDistance then
-            self.Winner = sender
-            self.HighestDistance = height
-        end
-        if self.GotScoreCount >= #self.ActivePlayers then
-            messageData.Timer = ""
-            messageData.Message = self.Winner.Name .. " won!"
+        --if height > self.HighestDistance then
+           -- self.Winner = sender
+            --self.HighestDistance = height
+       -- end
+       -- if self.GotScoreCount >= #self.ActivePlayers then
+           -- messageData.Timer = ""
+           -- messageData.Message = self.Winner.Name .. " won!"
         
-            self.Message.Value = HttpService:JSONEncode(messageData)
+           --- self.Message.Value = HttpService:JSONEncode(messageData)
 
-            self.GameOver.Value = true
-            Knit.GetService("SkyClimbersService").Client.EndGame:FireAll(self.ActivePlayers)
-        end
+           -- self.GameOver.Value = true
+           -- Knit.GetService("SkyClimbersService").Client.EndGame:FireAll(self.ActivePlayers)
+        --end
+        
     end)
 
     
@@ -133,38 +136,34 @@ function module:PrepGame()
      self.Message.Value = HttpService:JSONEncode(messageData)
      
      Knit.GetService("SkyClimbersService").Client.StopJumping:FireAll(self.ActivePlayers)
+     task.wait(1)
 
    
-  
-
-     task.wait(1)
      
-     --[[
+     
      messageData.Timer = ""
      messageData.Message = self:GetWinner().Name .. " won!"
  
      self.Message.Value = HttpService:JSONEncode(messageData)
-
+     task.wait(1)
      self.GameOver.Value = true
      Knit.GetService("SkyClimbersService").Client.EndGame:FireAll(self.ActivePlayers)
-     ]]--
+     
 
 
  
 end
 function  module:GetWinner()
-    local highestDistance = 0
+    local highScore = 0
     local winner = nil
 
-    for _, player in ipairs(self.ActivePlayers) do
-        local char = player.Character
-        if char then
-            if char.HumanoidRootPart.Position.Y > highestDistance then
-                winner = player
-                highestDistance = char.HumanoidRootPart.Position.Y
-            end
-        end
-    end
+  
+	for player: Player, data in self.Players do
+		if data and data.Height  > highScore then
+			winner = player
+			highScore = data.Height
+		end
+	end
     return winner
 end
 function  module:JoinGame(player)
@@ -174,21 +173,22 @@ function  module:JoinGame(player)
         local data = {
             Time = 0,
             Name = player.DisplayName,
-            Position = self.LaneCount
+            Position = self.LaneCount,
+            Height = 0
         }
         
         self.Players[player] = data
        -- MiniGameUtils.SpawnAroundPart(self.Game.GameStart, player.Character)
 
        local newLane = Extras.Lane:Clone()
-       newLane.Name = "Lane" .. data.Position
+       newLane.Name = "Lane_" .. player.Name
        newLane.Parent = self.Game.Lanes
        newLane:PivotTo(CFrame.new(self.Game:FindFirstChild("StartingLane").Position + Vector3.new(-laneBuffer * self.LaneCount,0,0)))
 
        Knit.GetService("SkyClimbersService").Client.JoinedGame:Fire(player, laneLength, data.Position, platformPoints)
        --local lane = self.Game.Lanes:FindFirstChild("Lane"..data.Position)
        player.Character:SetPrimaryPartCFrame(CFrame.new(newLane.PlayerSpawn.Position))
-       player.Character.HumanoidRootPart.Anchored = true
+       --player.Character.HumanoidRootPart.Anchored = true
         --local HRP =  player.Character.HumanoidRootPart
         --local finish = self.Game.Lanes:FindFirstChild("Lane"..data.Position).Finish
         --HRP.CFrame = CFrame.lookAt(HRP.Position, Vector3.new(finish.Position.X, HRP.Position.Y, finish.Position.Z))
@@ -228,11 +228,15 @@ function module:PrepLane(lane)
         --local orientation = lane.Start.Orientation
         --* CFrame.Angles(math.rad(orientation.X),math.rad(orientation.Y),math.rad(orientation.Z))
         local x
+        local newDirectionBB = DirectionBB:Clone()
         if point == "L" then
             x = - 10
+            newDirectionBB.Frame.TextLabel.Text = "A"
         else
             x = 10
+            newDirectionBB.Frame.TextLabel.Text = "D"
         end
+        newDirectionBB.Parent = newPlatform
         local platformPosition = Vector3.new(x, positionTracker,0)
         newPlatform:PivotTo(CFrame.new(lane.PlayerSpawn.Position + platformPosition) )
     end

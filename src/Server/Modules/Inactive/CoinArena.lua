@@ -1,7 +1,9 @@
 local module = {}
 module.__index = module
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local CollectionService = game:GetService("CollectionService")
 local HttpService = game:GetService("HttpService")
 
 -- what will be spawned
@@ -12,17 +14,23 @@ local Packages = ReplicatedStorage.Packages
 local Knit = require(Packages.Knit)
 
 --game vars
-local coinsPerSpawn = 10 -- +- 5
+--local coinsPerSpawn = 10 -- +- 5
 local invulTime = 3  --invul time after player is hit
 local duration = 90
 local startingCoins = 25
+local normalCoinSpawnTime = 5
+local highValueCoinSpawnTime = 9
+local coinDecayTime = 10 --how long dropped coins stay
+
 --things needed for the game
 local GameExtras = ReplicatedStorage.Assets.MiniGameExtras.CoinArena
 local CoinModel = GameExtras.Coin
+local CoinBagModel = GameExtras.CoinBag
 local GotHit:RemoteEvent = GameExtras.GotHit
 local SpawnPlayerCoins:RemoteEvent = GameExtras.SpawnPlayerCoins
 local HitProtection:Part = GameExtras.HitProtection
 local CoinBillboardUI:BillboardGui = GameExtras.CoinBillboardGui
+local CrownBillboardUI:BillboardGui = GameExtras.CrownBillboardGui
 
 function module.new(SpawnLocation)
     local data = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
@@ -40,8 +48,8 @@ function module:PrepGame()
    
     self.ActivePlayers = {}
     self.ElapsedTime = 0 --elapsed game time
-
-
+    self.CrownBB = CrownBillboardUI:Clone()
+    self.SpawnerThreads = {}
 
     GotHit.OnServerEvent:Connect(function(sender, otherCharacter)
         print(otherCharacter)
@@ -57,10 +65,11 @@ function module:PrepGame()
         if canCollect then
             canCollect.Value = false
         end
-
-        GotHit:FireClient(otherPlayer, sender)
+        local senderCharacter = workspace:FindFirstChild(sender.Name)
+        GotHit:FireClient(otherPlayer, senderCharacter.HumanoidRootPart)
         canHit.Value = false
 
+        
          --add shield
          local newShield = HitProtection:Clone()
          newShield.Parent = otherCharacter
@@ -71,7 +80,6 @@ function module:PrepGame()
          local sound = newShield:FindFirstChild("HitSound")
          if sound then
             sound:Play()
-            print("play sound")
          end
  
          task.spawn(function()
@@ -88,27 +96,13 @@ function module:PrepGame()
         end)
     end)
     SpawnPlayerCoins.OnServerEvent:Connect(function(sender, position)
-        --drop 30% of coins
-        local droppedCoinAmount = math.floor( self.Players[sender].Coins*.3)
-        self.Players[sender].Coins -= droppedCoinAmount
-        self:UpdateCoinDisplay(sender,self.Players[sender].Coins)
-
-        for i = 1, droppedCoinAmount, 1 do
-            local newCoin = CoinModel:Clone()
-            newCoin.Parent = workspace.CoinArena.Coins
-            
-            local angle = i * 2 * math.pi / droppedCoinAmount
-            local positionOnCircle = Vector3.new(math.sin(angle), 0, math.cos(angle))
-
-            local coinPos = (positionOnCircle * 6 ) + position
-
-            newCoin.Position = coinPos
-            newCoin.Touched:Connect(function(hit)
-                self:TouchedCoin(newCoin, hit)
-            end)
-
-        end
+        self:SpawnPhysicsCoins(sender, position)
     end)
+  --spawn coins task
+  self:SetupCoinSpawns()
+
+  --hazards
+  self:SetupHazards()
 
     Knit.GetService("CoinArenaService"):GamePrepped(self)
 
@@ -154,9 +148,11 @@ function module:PrepGame()
             canHit.Value = true
         end
     end
-    --spawn some coins to start
-    self:SpawnCoins()
 
+    Knit.GetService("CoinArenaService").Client.StartGame:FireAll()
+  
+
+    --[[
     self.ElapsedTimeThread = task.spawn(function()
         while true do
             task.wait(1)
@@ -167,6 +163,7 @@ function module:PrepGame()
         end
      
     end)
+    ]]--
 
    --main timer
      -- count down 
@@ -204,6 +201,89 @@ function module:PrepGame()
     
 
 end
+function module:SpawnPhysicsCoins(player, position)
+    --drop 30% of coins
+    local droppedCoinAmount = math.floor( self.Players[player].Coins*.3)
+   
+    self.Players[player].Coins -= droppedCoinAmount
+    self:UpdateCoinDisplay(player,self.Players[player].Coins)
+
+    for i = 1, droppedCoinAmount, 1 do
+        local newCoin:BasePart = CoinModel:Clone()
+        newCoin.Parent = workspace.CoinArena.Coins
+        
+        local angle = i * 2 * math.pi / droppedCoinAmount
+        local positionOnCircle = Vector3.new(math.sin(angle), 0, math.cos(angle))
+
+        local coinPos = (positionOnCircle * 6 ) + position
+
+        newCoin.Position = coinPos
+        newCoin.Anchored = false
+        newCoin.CanCollide = true
+        CollectionService:RemoveTag(newCoin, "RotateContinuous")
+        --newCoin:SetNetworkOwner(sender)
+        newCoin:ApplyImpulseAtPosition(Vector3.new(90,-90,90), position)
+        newCoin.Touched:Connect(function(hit)
+            self:TouchedCoin(newCoin, hit)
+        end)
+
+        --could probably move these tween client side
+        --[[
+        local tween = TweenService:Create(newCoin,TweenInfo.new(coinDecayTime), {Transparency = 1})
+        tween.Completed:Connect(function()
+            if newCoin then
+                newCoin:Destroy()
+            end
+        end)
+        tween:Play()
+        ]]--
+
+    end
+end
+function module:TouchedHazard(character, otherPartRoot)
+    --print(otherCharacter)
+    if self.GameOver.Value == true then return end
+    local canHit = character:FindFirstChild("CoinArena_CanHit")
+    if not canHit then return end
+    if canHit.Value == false then return end
+
+    local otherPlayer = Players:GetPlayerFromCharacter(character)
+    print(otherPlayer)
+    --print("sender: " .. sender.Name .. " hit player: " .. otherPlayer.Name)
+   
+    local canCollect = character:FindFirstChild("CoinArena_CanCollect")
+    if canCollect then
+        canCollect.Value = false
+    end
+    GotHit:FireClient(otherPlayer, otherPartRoot)
+    canHit.Value = false
+
+    
+     --add shield
+     local newShield = HitProtection:Clone()
+     newShield.Parent = character
+     local weld = Instance.new("Weld")
+     weld.Part0 = newShield
+     weld.Part1 = character.HumanoidRootPart
+     weld.Parent = newShield
+     local sound = newShield:FindFirstChild("HitSound")
+     if sound then
+        sound:Play()
+     end
+
+     task.spawn(function()
+        task.wait(.3)
+        if canCollect then
+            canCollect.Value = true
+        end
+     end)
+
+    task.spawn(function()
+        task.wait(invulTime)
+        canHit.Value = true
+        newShield:Destroy()
+    end)
+end
 function module:GetWinner()
     local highestCoins = 0
     local winner = nil
@@ -217,40 +297,160 @@ function module:GetWinner()
     return winner
 end
 function module:UpdateCoinDisplay(player, coins)
-    print(player.Name .. " " .. coins)
     local billboard = player.Character.Head:FindFirstChild("CoinBillboardGui")
     if billboard then
         billboard.Frame.TextLabel.Text = "x" .. coins
     end
-    
+    local winner = self:GetWinner()
+    if not winner then return end
+    if self.CrownBB.Parent ~= winner.Character.Head then
+        self.CrownBB.Parent = winner.Character.Head
+    end
+    Knit.GetService("CoinArenaService").Client.UpdateCoinAmount:Fire(player, coins)
+
 end
 function module:TouchedCoin(coin, hit)
-    local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
-            if player then
-                local canCollect = player.Character:FindFirstChild("CoinArena_CanCollect")
-                if not canCollect then return end
-                if canCollect.Value == true then
+    if self.GameOver.Value == false then
+        local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
+        if player then
+            local canCollect = player.Character:FindFirstChild("CoinArena_CanCollect")
+            if not canCollect then return end
+            if canCollect.Value == true then
                     
-                    self.Players[player].Coins += 1
-                    self:UpdateCoinDisplay(player,self.Players[player].Coins)
-                    Knit.GetService("CoinArenaService").Client.GotCoin:Fire(player, self.Players[player].Coins)
-                    coin:Destroy()
-                end
-                
-            end
+                self.Players[player].Coins += coin:GetAttribute("Value")
+                self:UpdateCoinDisplay(player,self.Players[player].Coins)
+                Knit.GetService("CoinArenaService").Client.GotCoin:Fire(player, self.Players[player].Coins, coin:GetAttribute("Value"))
+                coin:Destroy()
+            end     
+        end
+    end
 end
-
-function  module:SpawnCoins(player)
+--[[
+function  module:SpawnCoinsOld()
     local amount = math.random(coinsPerSpawn-2, coinsPerSpawn+2)
     local spawns = self.Game.CoinSpawns:GetChildren()
     for i = 1, amount, 1 do
-        local newCoin = CoinModel:Clone()
+        local chosenSpawn = spawns[math.random(1,#spawns)]
+        local newCoin
+        if chosenSpawn:GetAttribute("HighValue") then
+            newCoin = CoinBagModel:Clone()
+            newCoin.PrimaryPart.Touched:Connect(function(hit)
+                self:TouchedCoin(newCoin, hit)
+            end)
+        else
+            newCoin = CoinModel:Clone()
+            newCoin.Touched:Connect(function(hit)
+                self:TouchedCoin(newCoin, hit)
+            end)
+        end
+
         newCoin.Parent = self.Game.Coins
-        newCoin.Touched:Connect(function(hit)
-            self:TouchedCoin(newCoin, hit)
-        end)
-        MiniGameUtils.SpawnAroundPart(spawns[math.random(1,#spawns)], newCoin)
+       
+        MiniGameUtils.SpawnAroundPart(chosenSpawn, newCoin)
     end
+end
+]]--
+function module:SpawnCoin(spawn, highValue)
+
+        local newCoin
+        if highValue then
+            newCoin = CoinBagModel:Clone()
+            newCoin.PrimaryPart.Touched:Connect(function(hit)
+                self:TouchedCoin(newCoin, hit)
+            end)
+        else
+            newCoin = CoinModel:Clone()
+            newCoin.Touched:Connect(function(hit)
+                self:TouchedCoin(newCoin, hit)
+            end)
+        end
+
+        newCoin.Parent = spawn
+       
+        MiniGameUtils.SpawnAroundPart(spawn, newCoin)
+end
+function  module:SetupCoinSpawns()
+    for _, spawn in ipairs(self.Game.CoinSpawns:GetChildren()) do
+        local newThread = task.spawn(function()
+            while self.GameOver.Value == false do
+                task.wait()
+                if #spawn:GetChildren() == 0 then
+                    if spawn:GetAttribute("HighValue") then
+                        task.wait(highValueCoinSpawnTime)
+                        self:SpawnCoin(spawn, true)
+                    else
+                        task.wait(normalCoinSpawnTime)
+                        self:SpawnCoin(spawn, false)
+                    end
+                end
+                
+            end
+           
+            
+        end)
+        table.insert(self.SpawnerThreads, newThread)
+    end
+
+end
+function  module:SetupHazards()
+	for _, hazard in ipairs(self.Game.Hazards:GetChildren()) do
+		local pp:BasePart = hazard.PrimaryPart
+		if pp then
+			pp.Touched:Connect(function(hit)
+				local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
+				if player then -- do stuff end end)
+                    self:TouchedHazard(hit.Parent,pp)
+				end
+			end)
+		end
+	end
+
+    -- set up the kill part at the bottom of water
+    local killPart = self.Game:FindFirstChild("KillPart")
+    if not killPart then return end
+    killPart.Touched:Connect(function(hit)
+        local player = game:GetService("Players"):GetPlayerFromCharacter(hit.Parent)
+        if player then
+            --teleport player to random spawn
+            local spawns = self.Game.PlayerSpawns:GetChildren()
+            local randomSpawn = spawns[math.random(1,#spawns)]
+            player.Character:PivotTo(CFrame.new(randomSpawn.Position))
+            player.Character.HumanoidRootPart.Anchored = true
+            --make them lose coins now
+            task.spawn(function()
+                local newShield = HitProtection:Clone()
+                newShield.Parent = player.Character
+                local weld = Instance.new("Weld")
+                weld.Part0 = newShield
+                weld.Part1 = player.Character.HumanoidRootPart
+                weld.Parent = newShield
+                local sound = newShield:FindFirstChild("HitSound")
+                if sound then
+                    sound:Play()
+                end
+                local canCollect = player.Character:FindFirstChild("CoinArena_CanCollect")
+                if canCollect then
+                    canCollect.Value = false
+                end
+                task.spawn(function()
+                    task.wait(.5)
+                    if canCollect then
+                        canCollect.Value = true
+                    end
+                    player.Character.HumanoidRootPart.Anchored = false
+                end)
+                local canHit = player.Character:FindFirstChild("CoinArena_CanHit")
+                task.spawn(function()
+                    task.wait(invulTime)
+                    canHit.Value = true
+                    newShield:Destroy()
+                end)
+                task.wait(.2)
+                self:SpawnPhysicsCoins(player, player.Character.HumanoidRootPart.Position)
+            end)
+            
+        end
+    end)
 end
 function  module:JoinGame(player)
     if self.CanJoin.Value then
@@ -260,7 +460,11 @@ function  module:JoinGame(player)
         }
         self.Players[player] = data
         table.insert(self.ActivePlayers, player)
-        MiniGameUtils.SpawnAroundPart(self.Game.GameStart, player.Character)
+        local spawns = self.Game.PlayerSpawns:GetChildren()
+        local randomSpawn = spawns[math.random(1,#spawns)]
+        --MiniGameUtils.SpawnAroundPart(self.Game.GameStart, player.Character)
+        player.Character:SetPrimaryPartCFrame(CFrame.new(randomSpawn.Position))
+        randomSpawn:Destroy()
         print(player.DisplayName .. " has Joined the game")
 
         local canHit = player.Character:FindFirstChild("CoinArena_CanHit")
@@ -291,7 +495,20 @@ end
 
 function module:Destroy()
     --clean up
-    task.cancel(self.ElapsedTimeThread)
+    --task.cancel(self.ElapsedTimeThread)
+    for _, thread in ipairs(self.SpawnerThreads) do
+        task.cancel(thread)
+    end
+    for _, player in ipairs(self.ActivePlayers) do
+        local coinbb = player.Character.Head:FindFirstChild("CoinBillboardGui")
+        if coinbb then
+            coinbb:Destroy()
+        end
+    end
+    if self.CrownBB then
+        self.CrownBB:Destroy()
+    end
+    self.SpawnerThreads = {}
     self.Game:Destroy()
     self = nil
 end

@@ -4,22 +4,20 @@
 	Description: Biggest cube minigame.
 ]]
 
-local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 
 local GameTemplate = ReplicatedStorage.Assets.MiniGames.BiggestCube
 local GameExtras = ReplicatedStorage.Assets.MiniGameExtras.BiggestCube
 local CubeCharacter: Model = GameExtras.CubeCharacter
+local Food = GameExtras:WaitForChild("Food")
+local BaseSpeed = 16
 
-local Knit = require(ReplicatedStorage.Packages.Knit)
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
-local PivotTween = require(ReplicatedStorage.PivotTween)
 
 local GAME_DURATION = 60
 
@@ -43,9 +41,14 @@ end
 function BiggestCube:SetScore(player: Player, increment: number)
 	self.Players[player].Score += increment
 
+	if self.Players[player].Score < 0 then
+		self.Players[player].Score = 0
+	end
+
 	pcall(function()
 		player.Character.Head.BillboardGui.TextLabel.Text = tostring(self.Players[player].Score)
 	end)
+	return self.Players[player].Score
 end
 
 function BiggestCube:BroadcastWinner()
@@ -101,13 +104,6 @@ function BiggestCube:PrepGame()
 	local foodPosition: CFrame = foodSpawnZone:GetPivot()
 	local foodAreaSize: Vector3 = foodSpawnZone.Size
 
-	local foodObject = Instance.new("Part")
-	foodObject.Name = "Food"
-	self.Janitor:Add(foodObject)
-	foodObject.BrickColor = BrickColor.new("New Yeller")
-	foodObject.Size = Vector3.new(0.5, 0.5, 0.5)
-	foodObject.Anchored = false
-
 	local lastFeed = os.clock()
 	local endTime = os.time() + GAME_DURATION
 	local heartbeatConn: RBXScriptConnection
@@ -122,9 +118,19 @@ function BiggestCube:PrepGame()
 		-- generate new food.
 		if os.clock() - lastFeed > 0.1 then
 			lastFeed = os.clock()
+			local val = math.random(1,10)
+			local foodName = "GoodFood"
+			if val == 1 then
+				foodName = "BadFood"
+			else
+				if val == 10 then
+					foodName = "GreatFood"
+				end
+			end
+			local foodObject = Food:FindFirstChild(foodName)
 			local newFood = foodObject:Clone()
 			self.Janitor:Add(newFood)
-			newFood.Parent = workspace
+			newFood.Parent = self.Game
 			newFood:PivotTo(
 				foodPosition
 					+ Vector3.new(
@@ -156,18 +162,35 @@ function BiggestCube:JoinGame(player)
 
 		-- set cube characters
 		self.Janitor:Add(player.CharacterAdded:Connect(function(character)
+			
 			character.PrimaryPart.Touched:Connect(function(otherPart)
-				if otherPart:IsA("BasePart") and otherPart.Name == "Food" then
-					self:SetScore(player, 1)
+				local value = otherPart:FindFirstChild("Value")
+				if value then
+					local score = self:SetScore(player, value.Value)
 					otherPart:Destroy()
-					character.PrimaryPart.Size += Vector3.new(0.1, 0.1, 0.1)
+					character.Humanoid.WalkSpeed = BaseSpeed * 100 / (100 + score)
+					character.PrimaryPart.Size = Vector3.one + Vector3.new(0.1, 0.1, 0.1) * score
 				end
 			end)
-
+			
 			task.wait(1)
+			for _, v in ipairs(character:GetChildren()) do
+				if v:IsA("BasePart") then
+					v.CollisionGroup = "Default" -- // useful for disabling player-player collisions
+				end
+			end
+			self.GameOver.Changed:Connect(function(newValue)
+				if newValue then
+					character.Humanoid.WalkSpeed = BaseSpeed
+					for _, v in ipairs(character:GetChildren()) do
+						if v:IsA("BasePart") then
+							v.CollisionGroup = "Players" -- // useful for disabling player-player collisions
+						end
+					end
+				end
+			end)
 			MiniGameUtils.SpawnAroundPart(self.Game.Spawn, character)
 		end))
-
 		player:LoadCharacter()
 		return true
 	end

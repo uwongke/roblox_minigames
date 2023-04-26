@@ -3,9 +3,10 @@ module.__index = module
 local ContextActionService = game:GetService("ContextActionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpsService = game:GetService("HttpService")
-local Template = ReplicatedStorage.Assets.UI.MiniGames.DefaultUI
+local Template = ReplicatedStorage.Assets.UI.MiniGames.MadScientistUI
 local Player = game:GetService("Players").LocalPlayer
 local UI = Player:WaitForChild("PlayerGui")
+
 module.ID = script.Name
 local ScientistControls = {
     Forward = Enum.KeyCode.W,
@@ -22,6 +23,7 @@ function module.new(controller)
     ui.GUI = Template:Clone()
     ui.GUI.Parent = UI
     ui.TitleBar = ui.GUI.Frame.TitleBar
+    ui.Controls = ui.GUI.Frame.Controls
     setmetatable(ui,module)
     return ui
 end
@@ -42,6 +44,11 @@ function module:HandleMessage(message)
         if message == "Scientist" then
             self.Scientist = true
             self:DisableMovement()
+            self.Controls.Visible = true
+            task.spawn(function()
+                task.wait(6)
+                self.Controls:Destroy()
+            end)
         end
     end
 end
@@ -62,7 +69,6 @@ function module:SinkInput(actionName, inputState)
         local message = {}
         message.Direction = key
         message.State = inputState
-
         self.Controller:MessageServer(message)
     end
 

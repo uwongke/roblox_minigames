@@ -18,7 +18,9 @@ local ScreenButton = GameExtras.ScreenButton
 local HitBox = GameExtras.HitBox
 
 local GridSize = {7, 7}
-local GridBuffer = .5
+local GridBuffer = 1.5
+local InactiveColor = Color3.fromRGB(255, 135, 36)
+local ActiveColor = Color3.fromRGB(0, 255, 0)
 
 local Patterns = require(game:GetService("ReplicatedStorage"):WaitForChild("PixelArtistPatterns"))
 
@@ -49,6 +51,7 @@ function module:PrepGame()
     self.ActivePlayers = {}
     self.CanPlay = false  --this lets players toggle buttons
     self.PlayerArrays = {}
+    self.Target = {}
     local messageData = {
         Message="",
         Timer=""
@@ -102,11 +105,12 @@ end
 
 function module:WinCheck(player, playerArray)
     task.spawn(function()
-        if playerArray and self.Target then
+        local data = self.Players[player]
+        if playerArray and data then
             print("win check for " .. player.Name)
             for x = 1, GridSize[1], 1 do
                 for y = 1, GridSize[2], 1 do
-                    if playerArray[y][x] ~= self.Target[y][x] then
+                    if playerArray[y][x] ~= self.Target[data.Wins+1][y][x] then
                         return
                     end
                 end
@@ -131,6 +135,7 @@ function module:WinCheck(player, playerArray)
                 end
                 self.Message.Value = HttpService:JSONEncode(messageData)
                 self.GameOver.Value = true
+                Knit.GetService("PixelArtistService").Client.EndGame:FireAll()
                 return
             end
             Knit.GetService("PixelArtistService").Client.RoundOver:FireAll() --fire to set up client stuff
@@ -165,27 +170,35 @@ end
 
 --select the next pattern and turn on the screens
 function module:StartNextRound()
-    self.Target = Patterns[math.random(1,Patterns.Total)]
-    self:TurnOnScreens()
+    self.Target[1] = Patterns["Level1"][math.random(1,Patterns["Level1"].Total)]
+    self.Target[2] = Patterns["Level2"][math.random(1,Patterns["Level2"].Total)]
+    self.Target[3] = Patterns["Level3"][math.random(1,Patterns["Level3"].Total)]
     Knit.GetService("PixelArtistService").Client.TargetChosen:FireAll(self.Target) --fire to set up client stuff
+    for _, player in ipairs(self.ActivePlayers) do
+        local data = self.Players[player]
+        if data then
+            Knit.GetService("PixelArtistService").Client.TargetChosen:Fire(player, self.Target[data.Wins+1])
+            self:TurnOnScreens(player.Name, self.Target[data.Wins+1])
+        end
+    end
 
 end
 
 --show the target on screens
-function module:TurnOnScreens()
-    for _, room in ipairs(self.Game.Rooms:GetChildren()) do
-        local screen = room:FindFirstChild("Screen")
-        if screen then
-            for x = 1, GridSize[1], 1 do
-                for y = 1, GridSize[2], 1 do
-                    local screenButton = screen:FindFirstChild("Screen" .. x .. y)
-                    if screenButton then
-                        if self.Target[y][x] == 1 then
-                            screenButton.Color = Color3.new(0,0,0)
-                        else
-                            screenButton.Color = Color3.new(1, 1, 1)
-                        end
-                    end
+function module:TurnOnScreens(playerName, target)
+
+    local room = self.Game.Rooms:FindFirstChild("Room_" .. playerName)
+    if not room then return end
+    local screen = room:FindFirstChild("Screen")
+    if not screen then return end
+    for x = 1, GridSize[1], 1 do
+        for y = 1, GridSize[2], 1 do
+            local screenButton = screen:FindFirstChild("Screen" .. x .. y)
+            if screenButton then
+                if target[y][x] == 1 then
+                    screenButton.Color = ActiveColor
+                else
+                    screenButton.Color = InactiveColor
                 end
             end
         end
@@ -202,7 +215,7 @@ function module:ClearScreens()
                 for y = 1, GridSize[2], 1 do
                     local screenButton = screen:FindFirstChild("Screen" .. x .. y)
                     if screenButton then
-                        screenButton.Color = Color3.new(1, 1, 1)
+                        screenButton.Color = InactiveColor
                     end
                 end
             end
@@ -216,7 +229,7 @@ function module:ClearPlayerGrids()
         local buttons = room:FindFirstChild("Buttons")
         if buttons then
             for _, button in ipairs(buttons:GetChildren()) do
-              button.Color = Color3.new(1, 1, 1)
+              button.Color = InactiveColor
             end
         end
     end
@@ -238,6 +251,27 @@ function module:SetUpRoom(room, player)
             newButton:SetAttribute("YPos", y)
             newButton.Parent = room.Buttons
             newButton.Position = Vector3.new(buttonSpawn.Position.X + ((buttonSpawn.Size.X + GridBuffer)* -x) , buttonSpawn.Position.Y, buttonSpawn.Position.Z + ((buttonSpawn.Size.Z + GridBuffer) * -y))
+            --[[
+            local clickDetect:ClickDetector = newButton.ClickDetector
+            clickDetect.MouseClick:Connect(function()
+                if newButton:GetAttribute("CanSwitch") == true and self.CanPlay == true then
+                if newButton.Color.R == 0 then
+                    newButton.Color = Color3.new(1,1,1)
+                    self.PlayerArrays[player.Name][y][x] = 0
+                else
+                    newButton.Color = Color3.new(0,0,0)
+                    self.PlayerArrays[player.Name][y][x] = 1
+                end
+                --print(self.PlayerArrays[player.Name])
+                newButton:SetAttribute("CanSwitch", false)
+                self:WinCheck(player, self.PlayerArrays[player.Name])
+                task.spawn(function()
+                    task.wait(1)
+                    newButton:SetAttribute("CanSwitch", true)
+                    end)
+                end
+            end)
+            ]]--
         end
     end
 
@@ -314,6 +348,12 @@ end
 
 function module:Destroy()
     --clean up
+     --clear arrays
+     for _, player in ipairs(self.ActivePlayers) do
+        self:ClearPlayerArray(self.PlayerArrays[player.Name])
+    end
+    table.clear(self.PlayerArrays)
+
     self.Game:Destroy()
     self = nil
 end

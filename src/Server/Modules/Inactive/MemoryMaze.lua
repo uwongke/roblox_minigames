@@ -4,6 +4,8 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 -- what will be spawned
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
+local TweenService = game:GetService("TweenService")
 local GameTemplate = ReplicatedStorage.Assets.MiniGames.MemoryMaze
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 local duration = 300
@@ -86,10 +88,15 @@ function module:PrepGame()
         --get tile in that direction
         nextStep = self:TakeNextStep(nextStep)
         --make it solid
-        nextStep.CanCollide = true
+        --nextStep.CanCollide = true
+        nextStep:SetAttribute("Valid",true)
         --nextStep.Transparency = 0 -- uncomment to see the path
         --get next possibly set of directions
         nextSteps = self:CheckNextStep()
+    end
+
+    for _, falseFloor in pairs(CollectionService:GetTagged("FalseFloor")) do
+        self:HandleFalseFloor(falseFloor)
     end
 
     self.MessageTarget.Value = ""
@@ -139,6 +146,33 @@ function module:PrepGame()
 
     messageData.Message="Times up!"
     self.Message.Value = HttpService:JSONEncode(messageData)
+end
+
+function module:HandleFalseFloor(part)
+    local touched = false
+    part.Touched:Connect(function(other)
+        local char = other.Parent
+        if char:FindFirstChild("Humanoid") then
+            if not touched then
+                touched = true
+                local tweenInfo = TweenInfo.new(
+                    1, -- Time
+                    Enum.EasingStyle.Linear, -- EasingStyle
+                    Enum.EasingDirection.Out, -- EasingDirection
+                    0, -- RepeatCount (when less than zero the tween will loop indefinitely)
+                    true -- Reverses (tween will reverse once reaching it's goal)
+                )
+                local target = part:GetAttribute("Valid") and 0 or 1
+                local tween = TweenService:Create(part, tweenInfo, { Transparency = target})
+
+                tween.Completed:Connect(function()
+                    touched = false
+                end)
+
+                tween:Play()
+            end
+        end
+    end)
 end
 
 function module:CheckNextStep()

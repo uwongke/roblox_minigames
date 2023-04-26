@@ -3,6 +3,7 @@ module.__index = module
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
 local GameTemplate = ReplicatedStorage.Assets.MiniGames.HotPotato
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 local Extras = ReplicatedStorage.Assets.MiniGameExtras.HotPotato
@@ -23,6 +24,21 @@ function module:PrepGame()
         Message="",
         Timer=""
     }
+
+    for _, object in pairs(CollectionService:GetTagged("JumpPad")) do
+        if object:IsA("BasePart") then
+            object.Touched:Connect(function(other)
+                local humanoid = other.Parent:FindFirstChild("Humanoid")
+                humanoid.UseJumpPower = true
+                humanoid.JumpPower = 100 --The Default JumpPower for a Humanoid is 50
+                humanoid.Jump = true
+                task.wait(1)
+                humanoid.JumpPower = 50
+            end)
+        end
+    end
+
+    self.Players = {}
     
     messageData.Message = self.Game.Name .. " is ready"
     self.Message.Value = HttpService:JSONEncode(messageData)
@@ -45,6 +61,7 @@ function module:PrepGame()
         task.wait(1)
         count -= 1
     end
+    self.Players[self.CurrentHotPotato].StartTime = DateTime.now().UnixTimestampMillis
     messageData.Message = "Go!"
     self.Message.Value = HttpService:JSONEncode(messageData)
     task.wait(1)
@@ -67,6 +84,13 @@ function module:PrepGame()
     end
 
     self.GameOver.Value = true
+
+    local function Sort(Value1, Value2)
+        return Value1.Total > Value2.Total
+    end
+    
+    table.sort(self.Players, Sort)
+    print(self.Players)
 
     messageData.Message="Times up!"
     self.Message.Value = HttpService:JSONEncode(messageData)
@@ -96,6 +120,10 @@ function  module:JoinGame(player)
             self.Message.Value = HttpService:JSONEncode(messageData)
         end
 
+        self.Players[player] = {
+            Total = 0
+        }
+
         MiniGameUtils.SpawnAroundPart(self.Game.Origin, player.Character)
 
         local hitbox = Extras.HitBox:Clone()
@@ -105,19 +133,30 @@ function  module:JoinGame(player)
         hitbox.Parent = player.Character
 
         hitbox.Touched:Connect(function(other)
-            if not self.GameStarted then
+            if not self.GameStarted or player ~= self.CurrentHotPotato then
                 return
             end
             local character = other.Parent
             local otherPlayer = Players:GetPlayerFromCharacter(character)
             if otherPlayer then
                 if otherPlayer ~= self.LastHotPotato and otherPlayer ~= self.CurrentHotPotato then
-                    self.LastHotPotato = self.CurrentHotPotato
+                    local now = DateTime.now().UnixTimestampMillis
+                    local startTime = self.Players[player].StartTime
+                    self.Players[player].Total += now - startTime
+                    self.LastHotPotato = player
+                    local humanoid:Humanoid = player.Character:FindFirstChild("Humanoid")
+                    humanoid.WalkSpeed /=2
                     self.CurrentHotPotato = otherPlayer
+                    self.Players[otherPlayer].StartTime = now
                     self:AttachPotatoToPlayer(otherPlayer)
                     -- message the player that they now are holding the hot potato
                     self.MessageTarget.Value = ""..otherPlayer.UserId
                     self.Message.Value = HttpService:JSONEncode(messageData)
+                    -- clear out the message
+                    task.wait(3)
+                    local md = {Message = ""}
+                    self.MessageTarget.Value = ""..otherPlayer.UserId
+                    self.Message.Value = HttpService:JSONEncode(md)
                 end
             end
         end)
@@ -125,6 +164,9 @@ function  module:JoinGame(player)
         self.GameOver.Changed:Connect(function(newVal)
             if newVal then
                 if player == self.CurrentHotPotato then
+                    local now = DateTime.now().UnixTimestampMillis
+                    local startTime = self.Players[player].StartTime
+                    self.Players[player].Total += now - startTime
                     local humanoid:Humanoid = player.Character:FindFirstChild("Humanoid")
                     humanoid.Health = 0
                 else
@@ -142,6 +184,8 @@ function module:AttachPotatoToPlayer(player)
     local character = player.Character
     local hatAttach = character:FindFirstChild("HatAttachment", true)
     if hatAttach then
+        local humanoid:Humanoid = player.Character:FindFirstChild("Humanoid")
+        humanoid.WalkSpeed *=2
         local constraint = self.HotPotato:WaitForChild("RigidConstraint")
         constraint.Enabled = false
         self.HotPotato.Parent = character
