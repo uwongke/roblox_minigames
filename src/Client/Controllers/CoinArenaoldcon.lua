@@ -4,7 +4,7 @@ local TweenService = game:GetService("TweenService")
 
 local knit = require(ReplicatedStorage.Packages.Knit)
 local MiniGameExtras = ReplicatedStorage.Assets.MiniGameExtras.CoinArena
-local UI = ReplicatedStorage.Assets.UI.MiniGames.CoinArena.CoinArenaUI
+local UI = ReplicatedStorage.Assets.UI.MiniGames.CoinArenaUI
 local CoinSound:Sound = MiniGameExtras.CoinSound
 local CoinBagSound:Sound = MiniGameExtras.CoinBagSound
 local WaterSplashSound:Sound = MiniGameExtras.WaterSplash
@@ -150,38 +150,6 @@ function CoinArenaController:KnitStart()
          self.PunchListener:Disconnect()
 
     end)
-    GotHit.OnClientEvent:Connect(function(otherPlayerRoot)
-        
-        --local otherPlayerRoot = otherPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not otherPlayerRoot then return end
-        local localRoot = player.Character:FindFirstChild("HumanoidRootPart")
-
-
-        --drop 30% of coins
-       -- local droppedCoinAmount = math.floor(self.Coins*.3)
-        --self.Coins -= droppedCoinAmount
-        --self.CoinArenaService:UpdateCoinDisplay(self.Coins)
-        self.UI.Frame.TextLabel.Text = "x" .. self.Coins
-        SpawnPlayerCoins:FireServer(localRoot.Position)
-
-        --play hit animation
-        self.HitAnimationTrack:Play()
-        task.spawn(function()
-            task.wait(.3)
-            self.HitAnimationTrack:Stop()
-        end)
-
-        --local direction : Vector3 = ( localRoot.Position - otherPlayerRoot.Position).Unit
-        local lookDirection: Vector3 = CFrame.lookAt(otherPlayerRoot.Position,localRoot.Position).LookVector --unit vector of the direction towards the target
-        local noVertical:Vector3 = Vector3.new(lookDirection.X,0,lookDirection.Z)
-        localRoot:ApplyImpulse(noVertical*5000)
-
-    end)
-
-
-
-
-
 end
 
 return CoinArenaController
