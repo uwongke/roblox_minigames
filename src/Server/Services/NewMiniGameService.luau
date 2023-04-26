@@ -78,7 +78,7 @@ function MiniGameService.Client:GetMiniGame()
     return self._minigameName
 end
 
-local FORCE_MINIGAME = "WackAMole"
+local FORCE_MINIGAME = nil
 function MiniGameService:KnitStart()
     self.FSM = FSM.create({
         initial = "intermission",
