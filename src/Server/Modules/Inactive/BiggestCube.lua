@@ -4,12 +4,10 @@
 	Description: Biggest cube minigame.
 ]]
 
-local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 
@@ -17,10 +15,9 @@ local GameTemplate = ReplicatedStorage.Assets.MiniGames.BiggestCube
 local GameExtras = ReplicatedStorage.Assets.MiniGameExtras.BiggestCube
 local CubeCharacter: Model = GameExtras.CubeCharacter
 local Food = GameExtras:WaitForChild("Food")
+local BaseSpeed = 16
 
-local Knit = require(ReplicatedStorage.Packages.Knit)
 local Janitor = require(ReplicatedStorage.Packages.Janitor)
-local PivotTween = require(ReplicatedStorage.PivotTween)
 
 local GAME_DURATION = 60
 
@@ -51,6 +48,7 @@ function BiggestCube:SetScore(player: Player, increment: number)
 	pcall(function()
 		player.Character.Head.BillboardGui.TextLabel.Text = tostring(self.Players[player].Score)
 	end)
+	return self.Players[player].Score
 end
 
 function BiggestCube:BroadcastWinner()
@@ -164,19 +162,35 @@ function BiggestCube:JoinGame(player)
 
 		-- set cube characters
 		self.Janitor:Add(player.CharacterAdded:Connect(function(character)
+			
 			character.PrimaryPart.Touched:Connect(function(otherPart)
 				local value = otherPart:FindFirstChild("Value")
 				if value then
-					self:SetScore(player, value.Value)
+					local score = self:SetScore(player, value.Value)
 					otherPart:Destroy()
-					character.PrimaryPart.Size = Vector3.one + Vector3.new(0.1, 0.1, 0.1) * self.Players[player].Score
+					character.Humanoid.WalkSpeed = BaseSpeed * 100 / (100 + score)
+					character.PrimaryPart.Size = Vector3.one + Vector3.new(0.1, 0.1, 0.1) * score
 				end
 			end)
-
+			
 			task.wait(1)
+			for _, v in ipairs(character:GetChildren()) do
+				if v:IsA("BasePart") then
+					v.CollisionGroup = "Default" -- // useful for disabling player-player collisions
+				end
+			end
+			self.GameOver.Changed:Connect(function(newValue)
+				if newValue then
+					character.Humanoid.WalkSpeed = BaseSpeed
+					for _, v in ipairs(character:GetChildren()) do
+						if v:IsA("BasePart") then
+							v.CollisionGroup = "Players" -- // useful for disabling player-player collisions
+						end
+					end
+				end
+			end)
 			MiniGameUtils.SpawnAroundPart(self.Game.Spawn, character)
 		end))
-
 		player:LoadCharacter()
 		return true
 	end
