@@ -56,7 +56,7 @@ function module:Init(janitor, SpawnLocation)
             self.MiniGame.Players[player] = nil
         end
     end))
-
+   
     self._janitor = janitor
 
     --spawn coins task
@@ -99,7 +99,11 @@ function module:ShieldPlayer(character, playSound)
 end
 
 function module:Start()
-   
+
+    --make sure this game gets cleaned up
+    self._janitor:Add(function()
+        self:Destroy()
+    end)
     self.CrownBB = CrownBillboardUI:Clone()
     print("start")
    --hazards
@@ -133,6 +137,11 @@ function module:Start()
             print(player.Name .." can hit now")
             canHit.Value = true
         end
+        if player.Character then
+            if player.Character.PrimaryPart then
+                player.Character.PrimaryPart.Anchored = false
+            end
+         end
     end
 
     --Knit.GetService("CoinArenaService").Client.StartGame:FireAll()
@@ -187,10 +196,9 @@ end
 function module:GetWinners()
     local highestCoins = 0
     local winner = nil
-    for _, player in ipairs(self.MiniGame.Players) do
-        
-        if self.MiniGame.Players[player] > highestCoins then
-            highestCoins = self.MiniGame.Players[player]
+    for player, score in self.MiniGame.Players do
+        if score > highestCoins then
+            highestCoins = score
             winner = player
         end
     end
@@ -203,9 +211,12 @@ function module:UpdateCoinDisplay(player, coins)
     end
     local winner = self:GetWinners()
     if not winner then return end
-    if self.CrownBB.Parent ~= winner.Character.Head then
-        self.CrownBB.Parent = winner.Character.Head
+    if self.CrownBB then
+        if self.CrownBB.Parent ~= winner.Character.Head then
+            self.CrownBB.Parent = winner.Character.Head
+        end
     end
+
     UpdateCoinAmountEvent:Fire(player, coins)
 
 end
@@ -311,6 +322,12 @@ end
 function module:PrepPlayer(player)
     --spawn
     print("prep player")
+    if player.Character then
+            if player.Character.PrimaryPart then
+                player.Character.PrimaryPart.Anchored = true
+            end
+     end
+
     local spawns = self.MiniGame.Game.PlayerSpawns:GetChildren()
     local randomSpawn = spawns[math.random(1,#spawns)]
     MiniGameUtils.SpawnAroundPart(randomSpawn, player.Character)
@@ -345,7 +362,7 @@ function module:JoinGame(player : Player)
             if player then
                 if player.Character then
                     if player.Character.PrimaryPart then
-                        player.Character.PrimaryPart.Anchored = false
+                        --player.Character.PrimaryPart.Anchored = false
                     end
                 end
             end
@@ -362,13 +379,22 @@ function module:Update(players, dt, timeElapsed)
 end
 function module:Destroy()
     --clean up
-    for _, thread in ipairs(self.SpawnerThreads) do
-        task.cancel(thread)
+    print("Destroy")
+    if self.SpawnerThreads then
+        for _, thread in ipairs(self.SpawnerThreads) do
+            task.cancel(thread)
+        end
     end
-    self.GotHitThread:Disconnect()
-    self.SpawnCoinsThread:Disconnect()
+
+    if self.GotHitThread then
+        self.GotHitThread:Disconnect()
+    end
+    if self.SpawnCoinsThread then
+        self.SpawnCoinsThread:Disconnect()
+    end
     
-    for _, player in ipairs(self.MiniGame.Players) do
+    -- move players
+    for player, score in self.MiniGame.Players do
         local coinbb = player.Character.Head:FindFirstChild("CoinBillboardGui")
         if coinbb then
             coinbb:Destroy()
@@ -387,7 +413,6 @@ function module:Destroy()
         self.CrownBB:Destroy()
     end
     self.SpawnerThreads = {}
-    self.MiniGame:Destroy()
 end
 
 return module
