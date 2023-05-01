@@ -40,6 +40,7 @@ local FISHDEX = {
 --- Called when the round is initialized, 10s preview with game info is displayed on the client
 function module:Init(janitor, SpawnLocation)
     self.MiniGame = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
+    print(self.MiniGame)
     janitor:Add(self.MiniGame.Game)
    
     -- should clean this up with janitor
