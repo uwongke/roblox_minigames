@@ -148,71 +148,6 @@ function module:RemoveMole(mole, origin)
         end
     end
 end
-
---[[
-function module:PrepGame()
-    self.MessageTarget.Value = ""
-    messageData.Message = self.Game.Name .. " is ready"
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    self.CanJoin.Value = true
-    task.wait(3)
-    messageData.Message = "players have joined"
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    task.wait(3)
-    messageData.Message = "Whack as many moles as possible, Gold moles are worth 5X the points!"
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    task.wait(3)
-    messageData.Message = "Game will Start in ..."
-    self.CanJoin.Value = false-- it is now too late to join
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    task.wait(1)
-    local count =3
-    while count > 0 do
-        messageData.Message =count
-        self.Message.Value = HttpService:JSONEncode(messageData)
-        task.wait(1)
-        count -= 1
-    end
-    messageData.Message = "Go!"
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    task.wait(1)
-    messageData.Message = ""
-    self.Message.Value = HttpService:JSONEncode(messageData)
-
-    count = duration
-    while count >= 0 do
-        if self.GameOver.Value then
-            return
-        end
-        self.MessageTarget.Value = ""
-        messageData.Timer = count
-        self.Message.Value = HttpService:JSONEncode(messageData)
-        task.wait(1)
-        count -= 1
-    end
-
-    self.GameOver.Value = true
-
-    messageData.Message="Times up!"
-    self.Message.Value = HttpService:JSONEncode(messageData)
-
-    task.wait(1)
-
-    messageData.Timer = ""
-
-    if self.Red.Score > self.Blue.Score then
-        messageData.Message="Red Team Wins!"
-    else
-        if self.Red.Score == self.Blue.Score then
-            messageData.Message = "Draw!"
-        else
-            messageData.Message ="Blue Team Wins!"
-        end
-    end
-    self.Message.Value = HttpService:JSONEncode(messageData)
-end
-
-]]
 --initialize data and give mallets to players
 function  module:JoinGame(player)
     --if self.CanJoin.Value then
@@ -230,6 +165,7 @@ function  module:JoinGame(player)
     MiniGameUtils.SpawnAroundPart(self.MiniGame.Game[team.."Spawn"], player.Character)
     --give player a mallet
     local mallet = Extras.Mallet:Clone()
+    self._janitor:Add(mallet)
     -- check if mallet hits something
     mallet.Handle.Touched:Connect(function(hit)
         if self.MiniGame.GameOver.Value then
@@ -314,26 +250,6 @@ end
 
 function module:Update()
     -- no need to update anything in real-time for this game
-end
-
-function module:Destroy()
-    --clean up
-    self:RemoveMalletsForTeam(self.MiniGame.Blue)
-    self:RemoveMalletsForTeam(self.MiniGame.Red)
-    self.MiniGame = nil
-end
-
-function module:RemoveMalletsForTeam(team)
-    for _, player in team.Players do
-        local inHand = player.Character:FindFirstChild("Mallet")
-        local inBackPack = player.Backpack:FindFirstChild("Mallet")
-        if inHand then
-            inHand:Destroy()
-        end
-        if inBackPack then
-            inBackPack:Destroy()
-        end
-    end
 end
 
 return module
