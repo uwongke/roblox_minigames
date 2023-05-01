@@ -115,6 +115,8 @@ function MiniGameService:KnitStart()
                     -- TODO: setup client listner to display winners screen       
                 end
 
+                self._activeRound = false
+
                 -- cleanup janitor
                 if self._janitor then
                     self._janitor:Destroy()
@@ -139,10 +141,12 @@ function MiniGameService:KnitStart()
             end,
 
             on_initRound = function(this, event, from, to, ...)
-                -- reload characters
-                for _, player in Players:GetPlayers() do
-                    player:LoadCharacter()
-                end
+                -- -- reload characters
+                -- for _, player in Players:GetPlayers() do
+                --     player:LoadCharacter()
+                -- end
+
+                print("init new round")
 
                 local newJanitor = Janitor.new()
                 self._minigame:Init(newJanitor, GameSpawn)
@@ -159,9 +163,7 @@ function MiniGameService:KnitStart()
                 for player, data in PlayerManager.GetListOfActivePlayers() do
                     self._minigame:JoinGame(player)
                 end
-            end,
 
-            on_startRound = function(this, event, from, to, ...)
                 local endSignal = Signal.new()
                 -- once connection
                 endSignal:Once(function(exitCode)
@@ -174,10 +176,14 @@ function MiniGameService:KnitStart()
                         print("Ended round from command!")
                     end
                 end)
-                local roundTime = self._minigame:Start(endSignal) or 60
-                TIMES["roundStarted"] = roundTime
-
                 self._gameEndSignal = endSignal
+
+            end,
+
+            on_startRound = function(this, event, from, to, ...)
+                local roundTime = self._minigame:Start(self._gameEndSignal) or 60
+                TIMES["roundStarted"] = roundTime
+                self._activeRound = true
             end,
         }
     })
@@ -203,7 +209,7 @@ function MiniGameService:KnitStart()
         end
 
         -- run heartbeat update here
-        if currentState == "roundStarted" then
+        if self._activeRound then
             if self._minigame then
                 self._minigame:Update(dt, self._timer)
             else
