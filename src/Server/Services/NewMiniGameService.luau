@@ -74,11 +74,14 @@ function MiniGameService:MovePlayersTo(location)
     end
 end
 
+function MiniGameService:ForceMinigame(name)
+    self._forceMinigame = name
+end
+
 function MiniGameService.Client:GetMiniGame()
     return self._minigameName
 end
 
-local FORCE_MINIGAME = nil
 function MiniGameService:KnitStart()
     self.FSM = FSM.create({
         initial = "intermission",
@@ -125,11 +128,14 @@ function MiniGameService:KnitStart()
 
                 -- select next minigame preemptively
                 local minigameNames = TableUtil.Keys(LoadedGames)
-                local name = FORCE_MINIGAME or minigameNames[RANDOM:NextInteger(1, #minigameNames)]
+                local name = self._forceMinigame or minigameNames[RANDOM:NextInteger(1, #minigameNames)]
                 local nextModule = LoadedGames[name]
                 self._minigame = nextModule
                 self._minigameName = name
                 print("Minigame selected: " .. name .."!")
+
+                -- reset forced minigame
+                self._forceMinigame = nil
             end,
 
             on_initRound = function(this, event, from, to, ...)
@@ -205,6 +211,7 @@ function MiniGameService:KnitStart()
 end
 
 function MiniGameService:KnitInit()
+    self._forceMinigame = nil
     self.active = false
     self.GameStateChanged = Signal.new()
     for _,game in MiniGames:GetChildren() do
