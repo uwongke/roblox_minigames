@@ -139,6 +139,11 @@ function MiniGameService:KnitStart()
             end,
 
             on_initRound = function(this, event, from, to, ...)
+                -- reload characters
+                for _, player in Players:GetPlayers() do
+                    player:LoadCharacter()
+                end
+
                 local newJanitor = Janitor.new()
                 self._minigame:Init(newJanitor, GameSpawn)
                 self._janitor = newJanitor
