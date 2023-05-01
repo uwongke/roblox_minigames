@@ -118,6 +118,11 @@ function MiniGameService:KnitStart()
                     self._janitor = nil
                 end
 
+                -- reload characters
+                for _, player in Players:GetPlayers() do
+                    player:LoadCharacter()
+                end
+
                 -- select next minigame preemptively
                 local minigameNames = TableUtil.Keys(LoadedGames)
                 local name = FORCE_MINIGAME or minigameNames[RANDOM:NextInteger(1, #minigameNames)]
