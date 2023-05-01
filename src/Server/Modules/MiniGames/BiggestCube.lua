@@ -27,26 +27,18 @@ BiggestCube.__index = BiggestCube
 function BiggestCube:Init(janitor, SpawnLocation)
 	local data = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
 	data.ActiveStores = 0
+	janitor:Add(data.Game)
 
 	self.Janitor = janitor
-	self.spawnTimer = 0
+	data.spawnTimer = 0
 	local newCharacter: Model = CubeCharacter:Clone()
-	--janitor:Add(newCharacter)
-	data.Cube = newCharacter
+	janitor:Add(newCharacter)
 	newCharacter.Name = "StarterCharacter"
 	newCharacter.Parent = game.StarterPlayer
-
-	self.Janitor:Add(function()
-		data.Cube:Destroy()
-		for player, score in pairs(data.Players) do
-			player:LoadCharacter()
-		end
-	end)--reload character when janitor is destroyed
 	self.Minigame = data
 end
 
 function BiggestCube:Start()
-	--self.Minigame.Cube:Destroy()
 	return GAME_DURATION
 end
 
@@ -75,10 +67,13 @@ function BiggestCube:GetWinners()
 	return self.Minigame.Players, 3
 end
 
-function BiggestCube:Update(players, dt, timeElapsed)
-	self.spawnTimer += dt
-	if self.spawnTimer > 1 then
-		self.spawnTimer = 0
+function BiggestCube:Update(dt, timeElapsed)
+	if self.Minigame == nil or self.Janitor == nil then
+		return
+	end
+	self.Minigame.spawnTimer += dt
+	if self.Minigame.spawnTimer > .1 then
+		self.Minigame.spawnTimer = 0
 		local foodName = "GoodFood"
 		local val = math.random(1,10)
 		if val == 1 then
