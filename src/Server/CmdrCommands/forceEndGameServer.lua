@@ -3,8 +3,8 @@ local MiniGameService = Knit.GetService("MiniGameService")
 
 return function(context)
     if MiniGameService then
-        if MiniGameService.CurrentGame then
-            MiniGameService.CurrentGame.GameOver.Value = true
+        if MiniGameService._gameEndSignal then
+            MiniGameService._gameEndSignal:Fire(2)
         end
     end
 end
