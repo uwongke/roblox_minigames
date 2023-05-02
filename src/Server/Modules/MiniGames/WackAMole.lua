@@ -8,7 +8,6 @@ local HttpService = game:GetService("HttpService")
 
 -- what will be spawned
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Janitor = require(ReplicatedStorage.Packages.Janitor)
 local ServerComm = require(ReplicatedStorage.Packages.Comm).ServerComm
 local MoleComm = ServerComm.new(ReplicatedStorage, "MoleComm")
 local WhackMoleEvent = MoleComm:CreateSignal("WhackMoleEvent")
