@@ -150,7 +150,7 @@ function MiniGameService:KnitStart()
                 local endSignal = Signal.new()
                 -- once connection
                 endSignal:Once(function(exitCode)
-                    print("Ended round early from module")
+                    print("Ended round early from module", this.current)
                     this.endRound()
                     endSignal:Destroy()
                     self._gameEndSignal = nil
@@ -176,9 +176,6 @@ function MiniGameService:KnitStart()
                 for player, data in PlayerManager.GetListOfActivePlayers() do
                     self._minigame:JoinGame(player)
                 end
-
-                
-
             end,
 
             on_startRound = function(this, event, from, to, ...)
