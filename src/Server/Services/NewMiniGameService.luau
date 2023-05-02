@@ -147,9 +147,22 @@ function MiniGameService:KnitStart()
                 -- end
 
                 print("init new round")
+                local endSignal = Signal.new()
+                -- once connection
+                endSignal:Once(function(exitCode)
+                    print("Ended round early from module")
+                    this.endRound()
+                    endSignal:Destroy()
+                    self._gameEndSignal = nil
+
+                    if exitCode == 2 then
+                        print("Ended round from command!")
+                    end
+                end)
+                self._gameEndSignal = endSignal
 
                 local newJanitor = Janitor.new()
-                self._minigame:Init(newJanitor, GameSpawn)
+                self._minigame:Init(newJanitor, GameSpawn, endSignal)
                 self._janitor = newJanitor
                 self._janitor:Add(function()
                     if self._minigame["Destroy"] then
@@ -164,19 +177,7 @@ function MiniGameService:KnitStart()
                     self._minigame:JoinGame(player)
                 end
 
-                local endSignal = Signal.new()
-                -- once connection
-                endSignal:Once(function(exitCode)
-                    print("Ended round early from module")
-                    this.endRound()
-                    endSignal:Destroy()
-                    self._gameEndSignal = nil
-
-                    if exitCode == 2 then
-                        print("Ended round from command!")
-                    end
-                end)
-                self._gameEndSignal = endSignal
+                
 
             end,
 
