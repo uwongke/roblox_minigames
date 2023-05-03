@@ -38,8 +38,9 @@ local FISHDEX = {
 }
 
 --- Called when the round is initialized, 10s preview with game info is displayed on the client
-function module:Init(janitor, SpawnLocation)
+function module:Init(janitor, SpawnLocation, endSignal)
     self.MiniGame = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
+    print(self.MiniGame)
     janitor:Add(self.MiniGame.Game)
    
     -- should clean this up with janitor
@@ -51,6 +52,7 @@ function module:Init(janitor, SpawnLocation)
     end))
 
     self._janitor = janitor
+    self._endSignal = endSignal
 end
 
 --- Called when the round starts, timer is started as well. 
@@ -124,7 +126,14 @@ function module:Start()
     end
     
     self._timeElapsed = 0
-
+    task.delay(5, function()
+        print("force ending once")
+        self._endSignal:Fire()
+    end)
+    task.delay(6, function()
+        print("force ending twice")
+        self._endSignal:Fire()
+    end)
     return ROUND_TIME
 end
 

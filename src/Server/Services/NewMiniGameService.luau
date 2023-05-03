@@ -74,11 +74,14 @@ function MiniGameService:MovePlayersTo(location)
     end
 end
 
+function MiniGameService:ForceMinigame(name)
+    self._forceMinigame = name
+end
+
 function MiniGameService.Client:GetMiniGame()
     return self._minigameName
 end
 
-local FORCE_MINIGAME = nil
 function MiniGameService:KnitStart()
     self.FSM = FSM.create({
         initial = "intermission",
@@ -112,25 +115,60 @@ function MiniGameService:KnitStart()
                     -- TODO: setup client listner to display winners screen       
                 end
 
+                self._activeRound = false
+
                 -- cleanup janitor
                 if self._janitor then
                     self._janitor:Destroy()
                     self._janitor = nil
                 end
 
+                -- reload characters
+                for _, player in Players:GetPlayers() do
+                    player:LoadCharacter()
+                end
+
                 -- select next minigame preemptively
                 local minigameNames = TableUtil.Keys(LoadedGames)
-                local name = FORCE_MINIGAME or minigameNames[RANDOM:NextInteger(1, #minigameNames)]
+                local name = self._forceMinigame or minigameNames[RANDOM:NextInteger(1, #minigameNames)]
                 local nextModule = LoadedGames[name]
                 self._minigame = nextModule
                 self._minigameName = name
                 print("Minigame selected: " .. name .."!")
+
+                -- reset forced minigame
+                self._forceMinigame = nil
             end,
 
             on_initRound = function(this, event, from, to, ...)
+                -- -- reload characters
+                -- for _, player in Players:GetPlayers() do
+                --     player:LoadCharacter()
+                -- end
+
+                print("init new round")
+                local endSignal = Signal.new()
+                -- once connection
+                endSignal:Once(function(exitCode)
+                    print("Ended round early from module", this.current)
+                    this.endRound()
+                    endSignal:Destroy()
+                    self._gameEndSignal = nil
+
+                    if exitCode == 2 then
+                        print("Ended round from command!")
+                    end
+                end)
+                self._gameEndSignal = endSignal
+
                 local newJanitor = Janitor.new()
-                self._minigame:Init(newJanitor, GameSpawn)
+                self._minigame:Init(newJanitor, GameSpawn, endSignal)
                 self._janitor = newJanitor
+                self._janitor:Add(function()
+                    if self._minigame["Destroy"] then
+                        self._minigame:Destroy()
+                    end
+                end)
 
                 -- make players join the game
                 PlayerManager.ActivatePlayers()
@@ -141,9 +179,9 @@ function MiniGameService:KnitStart()
             end,
 
             on_startRound = function(this, event, from, to, ...)
-                -- module:Start()
-                local roundTime = self._minigame:Start() or 60
+                local roundTime = self._minigame:Start(self._gameEndSignal) or 60
                 TIMES["roundStarted"] = roundTime
+                self._activeRound = true
             end,
         }
     })
@@ -169,7 +207,7 @@ function MiniGameService:KnitStart()
         end
 
         -- run heartbeat update here
-        if currentState == "roundStarted" then
+        if self._activeRound then
             if self._minigame then
                 self._minigame:Update(dt, self._timer)
             else
@@ -182,6 +220,7 @@ function MiniGameService:KnitStart()
 end
 
 function MiniGameService:KnitInit()
+    self._forceMinigame = nil
     self.active = false
     self.GameStateChanged = Signal.new()
     for _,game in MiniGames:GetChildren() do
