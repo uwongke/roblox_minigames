@@ -57,9 +57,15 @@ function NewMiniGameController:KnitStart()
                 local newDisplay = ReplicatedStorage.Assets.UI.GameInfo:Clone()
                 local Main = newDisplay:WaitForChild("Main")
 
-                Main.Title.Text = title
+                Main.Top.Title.Text = title
                 Main.Description.Text = desc
                 Main.Image.Image = image
+
+                local skipButton:TextButton = Main.SkipButton.TextButton
+                skipButton.MouseButton1Click:Connect(function()
+                    self._gameInfo:Destroy()
+                    self._gameInfo = nil
+                end)
 
                 newDisplay.Parent = LocalPlayer.PlayerGui
                 self._gameInfo = newDisplay
