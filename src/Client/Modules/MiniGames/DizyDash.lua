@@ -72,13 +72,17 @@ function module:DisableMovement()
 end
 
 function module:UpdateCamera()
-    cam.CFrame = CFrame.new(Player.Character.PrimaryPart.CFrame.Position + offset * 5) * CFrame.new(-offset)
+    if cam.CameraType == Enum.CameraType.Scriptable then
+        cam.CFrame = CFrame.new(Player.Character.PrimaryPart.CFrame.Position + offset * 5) * CFrame.new(-offset)
+    end
 end
 
 -- Unbinds our "disable movement" so that the default keybinds are activated.
 function module:EnableMovement()
-    cam.CameraType = Enum.CameraType.Custom
     movementController.moveFunction = Player.Move
+    cam.CameraType = Enum.CameraType.Custom
+    local newChar = Player.Character or Player.CharacterAdded:Wait()
+    cam.CameraSubject = newChar:WaitForChild("Humanoid")
 end
 
 function module:Destroy()
