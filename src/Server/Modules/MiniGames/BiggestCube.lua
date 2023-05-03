@@ -107,7 +107,7 @@ function BiggestCube:JoinGame(player)
 				local score = self:SetScore(player, value.Value)
 				otherPart:Destroy()
 				character.Humanoid.WalkSpeed = BaseSpeed * 100 / (100 + score)
-				character.PrimaryPart.Size = Vector3.one + Vector3.new(0.1, 0.1, 0.1) * score
+				character.PrimaryPart.Size = Vector3.one * 2 + Vector3.new(0.125, 0.125, 0.125) * score
 			end
 		end)
 		

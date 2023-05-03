@@ -16,9 +16,9 @@ local offset = Vector3.new(0,1,3)
 
 function module:Init(newJanitor)
     cam.CameraType = Enum.CameraType.Scriptable
-    self.tick = RunService.Stepped:Connect(function(time, deltaTime)
+    newJanitor:Add(RunService.Stepped:Connect(function(time, deltaTime)
         module:UpdateCamera()
-    end)
+    end))
     newJanitor:Add(function()
         self:EnableMovement()
     end)
@@ -77,10 +77,6 @@ end
 
 -- Unbinds our "disable movement" so that the default keybinds are activated.
 function module:EnableMovement()
-    if self.tick then
-        self.tick:Disconnect()
-        self.tick = nil
-    end
     cam.CameraType = Enum.CameraType.Custom
     movementController.moveFunction = Player.Move
 end
