@@ -167,9 +167,10 @@ function module:HandleMessage(player, message)
         if message.State == Enum.UserInputState.End then
             direction *= -1
         end
-        local x = axis == "X" and self.LaserVelocity.X + direction or self.LaserVelocity.X
-        local z = axis == "Z" and self.LaserVelocity.Z + direction or self.LaserVelocity.Z
-        self.LaserVelocity = Vector3.new(x,0,z)
+
+        local x = axis == "X" and self.MiniGame.LaserVelocity.X + direction or self.MiniGame.LaserVelocity.X
+        local z = axis == "Z" and self.MiniGame.LaserVelocity.Z + direction or self.MiniGame.LaserVelocity.Z
+        self.MiniGame.LaserVelocity = Vector3.new(x,0,z)
     end
 end
 

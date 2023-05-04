@@ -154,7 +154,7 @@ function MiniGameService:KnitStart()
                     this.endRound()
                     endSignal:Destroy()
                     self._gameEndSignal = nil
-
+                    self._timer = 0
                     if exitCode == 2 then
                         print("Ended round from command!")
                     end
@@ -182,6 +182,13 @@ function MiniGameService:KnitStart()
                 TIMES["roundStarted"] = roundTime
                 self._activeRound = true
             end,
+
+            on_leave_roundStarted = function(this, event, from, to)
+                -- display end of game sequence
+                task.delay(2, this.confirm)
+                self._activeRound = false
+                return FSM.DEFERRED
+            end
         }
     })
 
@@ -210,8 +217,6 @@ function MiniGameService:KnitStart()
         if self._activeRound then
             if self._minigame then
                 self._minigame:Update(dt, self._timer)
-            else
-                self.FSM.reset() -- something went wrong
             end
         end
     end)
@@ -220,7 +225,8 @@ function MiniGameService:KnitStart()
 end
 
 function MiniGameService:KnitInit()
-    self._forceMinigame = nil
+    self._timer = 0
+    self._forceMinigame = "MadScientist"
     self.active = false
     self.GameStateChanged = Signal.new()
     for _,game in MiniGames:GetChildren() do
