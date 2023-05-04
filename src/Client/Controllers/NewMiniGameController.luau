@@ -63,6 +63,12 @@ function NewMiniGameController:KnitStart()
 
                 newDisplay.Parent = LocalPlayer.PlayerGui
                 self._gameInfo = newDisplay
+                task.delay(10, function()
+                    if self._gameInfo then
+                        self._gameInfo:Destroy()
+                        self._gameInfo = nil
+                    end
+                end)
             end
         elseif event == "startRound" then
             if self._gameInfo then
