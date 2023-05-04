@@ -22,6 +22,7 @@ local Knit = require(Packages.Knit)
 local TableUtil = require(Packages.TableUtil)
 local Janitor = require(Packages.Janitor)
 local Signal = require(Packages.Signal)
+local Timer = require(Packages.Timer)
 
 local RANDOM = Random.new(os.time())
 local GameSpawn = workspace.GameSpawn
@@ -93,7 +94,6 @@ function MiniGameService:KnitStart()
         },
         callbacks = {
             on_event = function(this, event, from, to, ...)
-                self._timer = 0
                 self.GameStateChanged:Fire(event, from, to, ...)
                 self.Client.GameStateChanged:FireAll(event, from, to, self._minigameName, TIMES[to])
 
@@ -172,7 +172,6 @@ function MiniGameService:KnitStart()
 
                 -- make players join the game
                 PlayerManager.ActivatePlayers()
-                print(PlayerManager.GetListOfActivePlayers())
                 for player, data in PlayerManager.GetListOfActivePlayers() do
                     self._minigame:JoinGame(player)
                 end
@@ -186,9 +185,9 @@ function MiniGameService:KnitStart()
         }
     })
 
-    RunService.Heartbeat:Connect(function(dt)
+    local dt = 1/20
+    Timer.Simple(1/20, function()
         if not self.active then return end -- don't do anything if game is explicitly halted
-
         -- dont do anything if no players
         if #game.Players:GetPlayers() < 1 then
             return
@@ -202,6 +201,7 @@ function MiniGameService:KnitStart()
 
         -- move to next game state after time elapses
         if self._timer >= stateTimer then
+            self._timer = 0
             self.FSM[event](self._minigameName)
             return -- return here so we don't run any extra update code
         end
