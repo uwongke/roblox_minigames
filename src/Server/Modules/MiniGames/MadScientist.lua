@@ -131,12 +131,12 @@ function module:Update(dt, time)
 
     if self.MiniGame.LaserVelocity.X > 0 and self.MiniGame.Game.LaserX.Position.X < self.MiniGame.Game.Walls.Right.Position.X or
         self.MiniGame.LaserVelocity.X < 0 and self.MiniGame.Game.LaserX.Position.X > self.MiniGame.Game.Walls.Left.Position.X then
-        self.MiniGame.Game.LaserX.Position += Vector3.xAxis * self.MiniGame.LaserVelocity.X * laserSpeed * time
+        self.MiniGame.Game.LaserX.Position += Vector3.xAxis * self.MiniGame.LaserVelocity.X * laserSpeed * dt
     end
     -- the z axis is a little wonky due to perspective of the scientist
     if self.MiniGame.LaserVelocity.Z > 0 and self.MiniGame.Game.LaserZ.Position.Z > self.MiniGame.Game.Walls.Back.Position.Z or
         self.MiniGame.LaserVelocity.Z < 0 and self.MiniGame.Game.LaserZ.Position.Z < self.MiniGame.Game.Walls.Front.Position.Z then
-        self.MiniGame.Game.LaserZ.Position += Vector3.zAxis * self.MiniGame.LaserVelocity.Z * -laserSpeed * time
+        self.MiniGame.Game.LaserZ.Position += Vector3.zAxis * self.MiniGame.LaserVelocity.Z * -laserSpeed * dt
     end
 end
 

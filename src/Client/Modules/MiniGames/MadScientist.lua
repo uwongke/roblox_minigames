@@ -57,11 +57,11 @@ function module:HandleMessage(message)
         if message == "Scientist" then
             self.Scientist = true
             self:DisableMovement()
-            self.Controls.Visible = true
+            --[[self.Controls.Visible = true
             task.spawn(function()
                 task.wait(10)
                 self.Controls:Destroy()
-            end)
+            end)]]
         end
     end
 end
@@ -82,7 +82,7 @@ function module:SinkInput(actionName, inputState)
         message.Direction = key
         message.State = inputState
         --self.Controller:MessageServer(message)
-        print(message)
+        --print(message)
         self.Event:Fire(message)
     end
 
