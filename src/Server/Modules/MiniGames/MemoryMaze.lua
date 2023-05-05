@@ -1,7 +1,6 @@
 local module = {}
 module.__index = module
 local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 -- what will be spawned
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
@@ -9,62 +8,44 @@ local TweenService = game:GetService("TweenService")
 local GameTemplate = ReplicatedStorage.Assets.MiniGames.MemoryMaze
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 local duration = 300
+local TotalPlayers = 0
 
-function module.new(SpawnLocation)
+function module:Init(janitor, SpawnLocation, endSignal)
+    TotalPlayers = 0
     local data = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
-    setmetatable(data,module)
-    task.spawn(function()
-        task.wait(3)
-        data:PrepGame()
-    end)
-    return data
-end
+    data.RemainingPlayers = 0
+    janitor:Add(data.Game)
+    self.MiniGame = data
+    self.Janitor = janitor
 
-function module:PrepGame()
-    local messageData = {
-        Message="",
-        Timer=""
-    }
-    --listen for when a player crosses the finish line
-    self.GoalListener = self.Game.GameFinish.Touched:Connect(function(part)
-        if self.GameOver.Value then
-            return
-        end
+    janitor:Add(data.Game.GameFinish.Touched:Connect(function(part)
         local player = Players:GetPlayerFromCharacter(part.Parent)
         if player then
-            local playerData = self.Players[player]
+            local playerData = data.Players[player]
             if playerData then
-                -- could be adjusted to allow multiple players to reach the end
-                self.GameOver.Value = true
-                self.GoalListener:Disconnect()
-                self.GoalListener = nil
-                self.Winners[player] = playerData
-                self.Players[player] = nil
-                -- you won!
-                self.MessageTarget.Value = player.UserId
-                messageData.Message="You Won!"
-                self.Message.Value = HttpService:JSONEncode(messageData)
-                task.wait()
-                -- everyone else lost (adding "-," to the front means every one except those listed)
-                self.MessageTarget.Value = "-,"..player.UserId
-                messageData.Message="You lost."
-                self.Message.Value = HttpService:JSONEncode(messageData)
+                data.RemainingPlayers -= 1
+                data.Winners[player] = playerData
+                playerData.Place = TotalPlayers - data.RemainingPlayers
+                data.Players[player] = nil
+                if data.RemainingPlayers <= 0 then
+                    endSignal:Fire()
+                end
             end
         end
-    end)
+    end))
 
     --bring those who fall through back to the start
-    self.FallListener = self.Game.FallCheck.Touched:Connect(function(part)
+    janitor:Add(data.Game.FallCheck.Touched:Connect(function(part)
         local Character = part.Parent
         local player = Players:GetPlayerFromCharacter(Character)
         if player then
             task.wait(1)
-            MiniGameUtils.SpawnAroundPart(self.Game.GameStart, Character)
+            MiniGameUtils.SpawnAroundPart(data.Game.GameStart, Character)
         end
-    end)
+    end))
 
     --choose random start point
-    local rows = self.Game:WaitForChild("Tiles"):GetChildren()
+    local rows = data.Game:WaitForChild("Tiles"):GetChildren()
     local row = rows[1]
     local cols = row:GetChildren()
     local y = math.random(1,#cols)
@@ -88,7 +69,7 @@ function module:PrepGame()
         --get tile in that direction
         nextStep = self:TakeNextStep(nextStep)
         --make it solid
-        --nextStep.CanCollide = true
+        nextStep.CanCollide = true
         nextStep:SetAttribute("Valid",true)
         --nextStep.Transparency = 0 -- uncomment to see the path
         --get next possibly set of directions
@@ -98,59 +79,17 @@ function module:PrepGame()
     for _, falseFloor in pairs(CollectionService:GetTagged("FalseFloor")) do
         self:HandleFalseFloor(falseFloor)
     end
+end
 
-    self.MessageTarget.Value = ""
-    messageData.Message = self.Game.Name .. " is ready"
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    self.CanJoin.Value = true
-    task.wait(3)
-    messageData.Message = "players have joined"
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    task.wait(3)
-    messageData.Message = "Find the path of real tiles to the end."
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    task.wait(3)
-    messageData.Message = "Race will Start in ..."
-    self.CanJoin.Value = false-- it is now too late to join
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    task.wait(1)
-    local count =3
-    while count > 0 do
-        messageData.Message =count
-        self.Message.Value = HttpService:JSONEncode(messageData)
-        task.wait(1)
-        count -= 1
-    end
-    messageData.Message = "Go!"
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    self.Game.Barrier:Destroy()--remove invinsible barrier so players can begin freely
-    task.wait(1)
-    messageData.Message = ""
-    self.Message.Value = HttpService:JSONEncode(messageData)
-    count = duration
-    --count down until a player passes the finish line
-    while count >= 0 do
-        if self.GameOver.Value then
-            return
-        end
-        self.MessageTarget.Value = ""
-        messageData.Timer = count
-        self.Message.Value = HttpService:JSONEncode(messageData)
-        task.wait(1)
-        count -= 1
-    end
-
-    self.GameOver.Value = true
-    self.GoalListener:Disconnect()
-    self.GoalListener = nil
-
-    messageData.Message="Times up!"
-    self.Message.Value = HttpService:JSONEncode(messageData)
+function module:Start()
+    TotalPlayers = self.MiniGame.RemainingPlayers
+    self.MiniGame.Game.Barrier:Destroy()--remove invinsible barrier so players can begin freely
+    return duration
 end
 
 function module:HandleFalseFloor(part)
     local touched = false
-    part.Touched:Connect(function(other)
+    self.Janitor:Add(part.Touched:Connect(function(other)
         local char = other.Parent
         if char:FindFirstChild("Humanoid") then
             if not touched then
@@ -172,7 +111,7 @@ function module:HandleFalseFloor(part)
                 tween:Play()
             end
         end
-    end)
+    end))
 end
 
 function module:CheckNextStep()
@@ -227,23 +166,30 @@ function module:TakeNextStep(direction)
     return nextTile
 end
 
+function module:GetWinners()
+    table.sort(self.MiniGame.Winners,function(a, b)
+        local a_score = self.Minigame.Winners[a].Place
+        local b_score = self.Minigame.Winners[b].Place
+
+        return a_score > b_score
+    end)
+    return self.MiniGame.Winners, 3
+end
+
+function module:Update()
+    
+end
+
 function  module:JoinGame(player)
-    if self.CanJoin.Value then
-        local data = {
-            Time = 0,
-            Name = player.DisplayName,
-            Position = 1
-        }
-        self.Players[player] = data
-        MiniGameUtils.SpawnAroundPart(self.Game.GameStart, player.Character)
-        return true
-    end
-    return false
+    local data = {
+        Place = 0,
+        Name = player.DisplayName
+    }
+    self.MiniGame.Players[player] = data
+    MiniGameUtils.SpawnAroundPart(self.MiniGame.Game.GameStart, player.Character)
 end
 
 function module:Destroy()
-    --clean up
-    self.Game:Destroy()
     self = nil
 end
 
