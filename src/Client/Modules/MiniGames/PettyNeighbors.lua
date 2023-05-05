@@ -9,21 +9,21 @@ local UI = Player:WaitForChild("PlayerGui")
 
 function module:Init(newJanitor)
     -- return display info
-    return "Whack-A-Mole!",
-    "Work together to whack moles that pop up before they hide back away! Different moles give you different points. Get the most points to win!",
+    return "Petty Neighbors",
+    "The team with the least amount of trash on their side of the fence wins!",
     "rbxassetid://12716822940"
 end
 
 function module:Start(janitor)
     -- create ui link
-    local MoleComm = ClientComm.new(game:GetService("ReplicatedStorage"), true, "MoleComm")
-    local WhackMoleEvent = MoleComm:GetSignal("WhackMoleEvent")
+    local PettyNeighborsComm = ClientComm.new(game:GetService("ReplicatedStorage"), true, "PettyNeighborsComm")
+    local PettyNeighborsCommEvent = PettyNeighborsComm:GetSignal("PettyNeighborsCommEvent")
 
     -- create score display
     self.GUI = Template:Clone()
     self.GUI.Parent = UI
     self.TitleBar = self.GUI.Frame.TitleBar
-    janitor:Add(WhackMoleEvent:Connect(function(value)
+    janitor:Add(PettyNeighborsCommEvent:Connect(function(value)
         self:HandleMessage(value)
     end))
     janitor:Add(self.GUI)
@@ -44,12 +44,8 @@ function module:HandleMessage(message)
     end
 end
 
-function module:Update()
-    -- no need to update anything in real-time for this game
-end
-
 function module:Destroy()
-    -- no need for external clean up
+    self = nil
 end
 
 return module
