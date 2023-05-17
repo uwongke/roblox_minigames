@@ -4,12 +4,9 @@
 	Description: This is the Store Manager minigame.
 ]]
 
-local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 
@@ -17,8 +14,6 @@ local GameTemplate = ReplicatedStorage.Assets.MiniGames.StoreManager
 local GameExtras = ReplicatedStorage.Assets.MiniGameExtras.StoreManager
 local StoreTemplate = GameExtras.StoreTemplate
 
-local Knit = require(ReplicatedStorage.Packages.Knit)
-local Janitor = require(ReplicatedStorage.Packages.Janitor)
 local PivotTween = require(ReplicatedStorage.PivotTween)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
@@ -28,47 +23,27 @@ local POINT_PER_CUSTOMER = 1
 local StoreManager = {}
 StoreManager.__index = StoreManager
 
-function StoreManager.new(SpawnLocation)
+function StoreManager:Init(Janitor, SpawnLocation, EndSignal)
 	local data = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
-	setmetatable(data, StoreManager)
-
-	data.Janitor = Janitor.new()
 	data.ActiveStores = 0
-
-	task.delay(3, function()
-		data:PrepGame()
-	end)
-
-	return data
+	data.StartSignal = Signal.new()
+	self.MiniGame = data
+	self.Janitor = Janitor
+	Janitor:Add(data.Game)
 end
 
-function StoreManager:SetMessage(message: string?, timer: number?, yieldTime: number?)
-	if message then
-		self.MessageData.Message = message
+function StoreManager:Start()
+	for player, data in self.MiniGame.Players do
+		self.MiniGame.StartSignal:Fire(player)
 	end
-
-	if timer then
-		self.MessageData.Timer = tostring(timer)
-	end
-
-	self.Message.Value = HttpService:JSONEncode(self.MessageData)
-
-	if yieldTime then
-		task.wait(yieldTime)
-	end
+	return GAME_DURATION
 end
-
---[[
-
-	TODO : PROJECT SCORE FROM CUSTOMER
-
-]]
 
 function StoreManager:SetScore(player: Player, increment: number)
-	local store = if self.Players[player] then self.Players[player].Store else nil
+	local store = if self.MiniGame.Players[player] then self.MiniGame.Players[player].Store else nil
 	print(store)
 	if store then
-		self.Players[player].Score += increment
+		self.MiniGame.Players[player].Score += increment
 
 		pcall(function()
 			store.Display.SurfaceGui.TextLabel.Text = tostring(self.Players[player].Score)
@@ -78,18 +53,18 @@ end
 
 function StoreManager:CreateShop(player: Player)
 	local orderSignal = Signal.new()
-	local mapCF = self.Game:GetPivot()
-	local mapSize = self.Game:GetExtentsSize() / 2
+	local mapCF = self.MiniGame.Game:GetPivot()
+	local mapSize = self.MiniGame.Game:GetExtentsSize() / 2
 
 	-- generateShop
 	local storeTemplate: Model = StoreTemplate:Clone()
 	self.Janitor:Add(storeTemplate)
 	storeTemplate.Parent = workspace
-	self.ActiveStores += 1
+	self.MiniGame.ActiveStores += 1
 
 	local storeSize = storeTemplate:GetExtentsSize()
-	local canRotate: boolean = self.ActiveStores % 2 == 0
-	local zIncrement = math.ceil(self.ActiveStores / 2)
+	local canRotate: boolean = self.MiniGame.ActiveStores % 2 == 0
+	local zIncrement = math.ceil(self.MiniGame.ActiveStores / 2)
 
 	if canRotate then
 		storeTemplate:PivotTo(
@@ -165,7 +140,7 @@ function StoreManager:CreateShop(player: Player)
 				self.Janitor:Add(newOrderText)
 				newOrderText.Text = order
 				newOrderText.Visible = true
-				newOrderText.Parent = billboard
+				newOrderText.Parent = billboard.Frame
 
 				-- add to order queue folder
 				local newOrder = Instance.new("NumberValue")
@@ -175,6 +150,12 @@ function StoreManager:CreateShop(player: Player)
 			end
 		end
 	end
+
+	self.MiniGame.StartSignal:Connect(function(target)
+		if player == target then
+			createCustomer()
+		end
+	end)
 
 	-- trash bin
 	local function trash(playerWhoClicked: Player)
@@ -260,7 +241,7 @@ function StoreManager:CreateShop(player: Player)
 		local humanoid: Humanoid = if playerWhoClicked.Character
 			then playerWhoClicked.Character:FindFirstChild("Humanoid")
 			else nil
-		if self.GameOver.Value == false and humanoid then
+		if humanoid then
 			local emptyCup: Tool = GameExtras.Empty:Clone()
 			self.Janitor:Add(emptyCup)
 
@@ -273,78 +254,41 @@ function StoreManager:CreateShop(player: Player)
 		end
 	end)
 
-	local heartbeatConn: RBXScriptConnection
-	local hasActiveCustomer = false
-	heartbeatConn = RunService.Heartbeat:Connect(function(deltaTime)
-		if self.GameOver.Value == true then
-			heartbeatConn:Disconnect()
-			return
-		end
-
-		if not hasActiveCustomer then
-			hasActiveCustomer = true
-			createCustomer()
-		end
-	end)
-
 	MiniGameUtils.SpawnAroundPart(storeTemplate.Spawn, player.Character)
 
 	return storeTemplate
 end
 
-function StoreManager:PrepGame()
-	self.MessageData = {
-		Message = "",
-		Timer = "",
-	}
+function StoreManager:GetWinners()
 
-	self.MessageTarget.Value = ""
+    -- sort by players
+    table.sort(self.MiniGame.Players, function(a, b)
+        local a_score = self.MiniGame.Players[a].Score
+        local b_score = self.MiniGame.Players[b].Score
 
-	self.CanJoin.Value = true
-	self:SetMessage(self.Game.Name .. " is ready", nil, 3)
-	self:SetMessage("players have joined", nil, 3)
-	self:SetMessage("GO!", nil, 1)
-	self:SetMessage("")
+        return a_score > b_score
+    end)
 
-	local endTime = os.time() + GAME_DURATION
-	local heartbeatConn: RBXScriptConnection
-	heartbeatConn = RunService.Heartbeat:Connect(function(deltaTime)
-		if self.GameOver.Value == true then
-			heartbeatConn:Disconnect()
-			return
-		end
+    return self.MiniGame.Players, 3
+end
 
-		self:SetMessage("", math.floor(endTime - os.time()))
-	end)
-
-	repeat
-		task.wait()
-	until os.time() >= endTime
-
-	self.GameOver.Value = true
-	self:SetMessage("Times Up!")
+function StoreManager:Update(dt,time)
+	
 end
 
 function StoreManager:JoinGame(player)
-	if self.CanJoin.Value then
-		local store = self:CreateShop(player)
+	local store = self:CreateShop(player)
 
-		local data = {
-			Score = 0,
-			Name = player.DisplayName,
-			Store = store,
-		}
-		self.Players[player] = data
-
-		return true
-	end
-	return false
+	local data = {
+		Score = 0,
+		Name = player.DisplayName,
+		Store = store,
+	}
+	self.MiniGame.Players[player] = data
 end
 
 function StoreManager:Destroy()
 	--clean up
-	self.Janitor:Destroy()
-	self.Game:Destroy()
 	self = nil
 end
 
