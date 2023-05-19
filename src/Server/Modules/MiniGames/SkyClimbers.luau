@@ -31,10 +31,11 @@ local Lane = Extras.Lane
 local Platform = Extras.Platform
 local SentHeightEvent:RemoteEvent = Extras.SentHeightEvent
 local DirectionBB:BillboardGui = Extras.DirectionBB
+local Backgrounds:Folder = Extras.Backgrounds:GetChildren()
 
 --game vars
 local ROUND_TIME = 30
-local laneLength = 600
+local laneLength = 800
 local distanceBetweenPlatforms = 10
 local laneBuffer = 80
 local platformPoints = {}
@@ -64,7 +65,9 @@ function module:PrepGame()
     platformPoints = {}
     self.ActivePlayers = {}
 
+    self:PrepBackground()
     self:SetPlatformPoints()
+
     self.GotScoreCount = 0
     self.Winner = nil
     self.HighestDistance = 0
@@ -153,9 +156,20 @@ end
 function module:Update()
     -- no need to update anything in real-time for this game
 end
+function module:PrepBackground()
+    self.GeneratedBackground = Instance.new("Model")
+    for i = 0, 10, 1 do
+        local newBackground:Model = Backgrounds[math.random(1, #Backgrounds)]:Clone()
+        newBackground:PivotTo(CFrame.new(Vector3.new(0, 3.5 + (80 * i), 0))  * CFrame.Angles(0,math.rad(180),0))  --3.5
+        --newBackground:PivotTo(CFrame.new(Vector3.new(lane.PlayerSpawn.Position.X, 3.5 + (80 * backgroundNumber), lane.PlayerSpawn.Position.Z))  * CFrame.Angles(0,math.rad(180),0))  --3.5
+        newBackground.Parent = self.GeneratedBackground
+    end
+   
+end
 function module:PrepLane(lane)
     local positionTracker = 0
     local platformNumber = 0
+    --local backgroundNumber = 0
     for _, point in ipairs(platformPoints) do
         positionTracker += distanceBetweenPlatforms
         platformNumber += 1
@@ -177,7 +191,21 @@ function module:PrepLane(lane)
         newDirectionBB.Parent = newPlatform
         local platformPosition = Vector3.new(x, positionTracker,0)
         newPlatform:PivotTo(CFrame.new(lane.PlayerSpawn.Position + platformPosition) )
+
+        --[[
+        if platformNumber % 7 == 0 then
+            print("new back!")
+            local newBackground:Model = Backgrounds[math.random(1, #Backgrounds)]:Clone()
+            newBackground:PivotTo(CFrame.new(Vector3.new(lane.PlayerSpawn.Position.X, 3.5 + (80 * backgroundNumber), lane.PlayerSpawn.Position.Z))  * CFrame.Angles(0,math.rad(180),0))  --3.5
+            newBackground.Parent = lane.Backgrounds
+            backgroundNumber += 1
+        end
+        ]]--
     end
+    local newBackground = self.GeneratedBackground:Clone()
+    newBackground:PivotTo(CFrame.new(Vector3.new(lane.PlayerSpawn.Position.X, 457 , lane.PlayerSpawn.Position.Z))  * CFrame.Angles(0,math.rad(180),0))  --3.5
+    newBackground.Parent = lane.Backgrounds
+  
 end
 
 function module:Destroy()
