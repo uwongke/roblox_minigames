@@ -22,6 +22,7 @@ local Knit = require(Packages.Knit)
 local TableUtil = require(Packages.TableUtil)
 local Janitor = require(Packages.Janitor)
 local Signal = require(Packages.Signal)
+local Timer = require(Packages.Timer)
 
 local RANDOM = Random.new(os.time())
 local GameSpawn = workspace.GameSpawn
@@ -93,7 +94,6 @@ function MiniGameService:KnitStart()
         },
         callbacks = {
             on_event = function(this, event, from, to, ...)
-                self._timer = 0
                 self.GameStateChanged:Fire(event, from, to, ...)
                 self.Client.GameStateChanged:FireAll(event, from, to, self._minigameName, TIMES[to])
 
@@ -154,7 +154,7 @@ function MiniGameService:KnitStart()
                     this.endRound()
                     endSignal:Destroy()
                     self._gameEndSignal = nil
-
+                    self._timer = 0
                     if exitCode == 2 then
                         print("Ended round from command!")
                     end
@@ -172,7 +172,6 @@ function MiniGameService:KnitStart()
 
                 -- make players join the game
                 PlayerManager.ActivatePlayers()
-                print(PlayerManager.GetListOfActivePlayers())
                 for player, data in PlayerManager.GetListOfActivePlayers() do
                     self._minigame:JoinGame(player)
                 end
@@ -183,12 +182,19 @@ function MiniGameService:KnitStart()
                 TIMES["roundStarted"] = roundTime
                 self._activeRound = true
             end,
+
+            on_leave_roundStarted = function(this, event, from, to)
+                -- display end of game sequence
+                task.delay(2, this.confirm)
+                self._activeRound = false
+                return FSM.DEFERRED
+            end
         }
     })
 
-    RunService.Heartbeat:Connect(function(dt)
+    local dt = 1/20
+    Timer.Simple(1/20, function()
         if not self.active then return end -- don't do anything if game is explicitly halted
-
         -- dont do anything if no players
         if #game.Players:GetPlayers() < 1 then
             return
@@ -202,6 +208,7 @@ function MiniGameService:KnitStart()
 
         -- move to next game state after time elapses
         if self._timer >= stateTimer then
+            self._timer = 0
             self.FSM[event](self._minigameName)
             return -- return here so we don't run any extra update code
         end
@@ -210,8 +217,6 @@ function MiniGameService:KnitStart()
         if self._activeRound then
             if self._minigame then
                 self._minigame:Update(dt, self._timer)
-            else
-                self.FSM.reset() -- something went wrong
             end
         end
     end)
@@ -220,7 +225,8 @@ function MiniGameService:KnitStart()
 end
 
 function MiniGameService:KnitInit()
-    self._forceMinigame = nil
+    self._timer = 0
+    self._forceMinigame = "MadScientist"
     self.active = false
     self.GameStateChanged = Signal.new()
     for _,game in MiniGames:GetChildren() do

@@ -12,6 +12,7 @@ local duration = 60
 local TotalPlayers = 0
 
 function module:Init(janitor, SpawnLocation, endSignal)
+    TotalPlayers = 0
     local data = MiniGameUtils.InitMiniGame(GameTemplate, SpawnLocation)
     data.RemainingPlayers = 0
     self.Janitor = janitor

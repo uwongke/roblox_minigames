@@ -4,10 +4,7 @@
 	Description: Biggest cube minigame.
 ]]
 
-local HttpService = game:GetService("HttpService")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local MiniGameUtils = require(script.Parent.Parent.MiniGameUtils)
 
@@ -16,8 +13,6 @@ local GameExtras = ReplicatedStorage.Assets.MiniGameExtras.BiggestCube
 local CubeCharacter: Model = GameExtras.CubeCharacter
 local Food = GameExtras:WaitForChild("Food")
 local BaseSpeed = 16
-
-local Janitor = require(ReplicatedStorage.Packages.Janitor)
 
 local GAME_DURATION = 60
 
