@@ -226,7 +226,7 @@ end
 
 function MiniGameService:KnitInit()
     self._timer = 0
-    self._forceMinigame = "MadScientist"
+    --self._forceMinigame = "MadScientist"
     self.active = false
     self.GameStateChanged = Signal.new()
     for _,game in MiniGames:GetChildren() do
